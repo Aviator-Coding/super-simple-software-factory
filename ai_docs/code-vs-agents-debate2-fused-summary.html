@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Fused summary of the six-round ARCHITECT vs BUILDER debate on dividing work between deterministic code, specialized models, agents, and humans.">
+<title>Agents + Code: How to Draw the Boundary — Fused Debate Summary (claude-fable-5 × gpt-5.6-sol)</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b1220;
+    --panel: #121a2b;
+    --panel2: #182338;
+    --ink: #eaf0fb;
+    --muted: #9fadc4;
+    --line: #263650;
+    --architect: #6ea8fe;  /* ARCHITECT blue */
+    --builder: #f2a65a;    /* BUILDER orange */
+    --code: #56d7ff;       /* tier: code */
+    --model: #59dfa0;      /* tier: model */
+    --agent: #bd8cff;      /* tier: agent */
+    --human: #ffca67;      /* tier: human */
+    --green: #4cc38a;
+    --red: #e5636e;
+    --code-bg: #1d2942;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(circle at 8% 0%, rgba(110,168,254,.10), transparent 30rem),
+      radial-gradient(circle at 92% 8%, rgba(242,166,90,.09), transparent 32rem),
+      var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 24px; }
+  .site-header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(11,18,32,.86); backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 58px; }
+  .brand { font-weight: 800; letter-spacing: -.02em; }
+  .nav ul { display: flex; flex-wrap: wrap; gap: .9rem; margin: 0; padding: 0; list-style: none; }
+  .nav a { color: var(--muted); text-decoration: none; font-size: .88rem; }
+  .nav a:hover { color: var(--ink); }
+  @media (max-width: 800px) { .nav ul { display: none; } }
+
+  header.hero { padding: 56px 0 28px; border-bottom: 1px solid var(--line); }
+  h1 { font-size: clamp(1.8rem, 4.5vw, 2.6rem); margin: 0 0 10px; letter-spacing: -.03em; line-height: 1.15; }
+  h1 .c { color: var(--code); } h1 .a { color: var(--agent); }
+  .subtitle { color: var(--muted); font-size: 1.02rem; max-width: 820px; }
+  .badges { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge { font-size: .74rem; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .badge.architect { border-color: var(--architect); color: var(--architect); }
+  .badge.builder { border-color: var(--builder); color: var(--builder); }
+  .badge.fused { border-color: var(--green); color: var(--green); }
+
+  section { padding: 34px 0 6px; scroll-margin-top: 68px; }
+  h2 { font-size: 1.35rem; margin: 10px 0 14px; padding-left: 12px; border-left: 4px solid var(--architect); letter-spacing: -.02em; }
+  h3 { font-size: 1.05rem; margin: 18px 0 8px; }
+  p { margin: 8px 0; }
+  .muted { color: var(--muted); }
+  .src { font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px; border-radius: 6px; vertical-align: middle; margin-left: 8px; }
+  .src.a { background: rgba(110,168,254,.14); color: var(--architect); }
+  .src.b { background: rgba(242,166,90,.14); color: var(--builder); }
+  .src.f { background: rgba(76,195,138,.14); color: var(--green); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; margin: 14px 0; }
+  .card p, .card li { color: var(--muted); }
+  .card strong { color: var(--ink); }
+  .verdict { background: linear-gradient(135deg, #16233a, #121a2b); border-color: var(--architect); }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) { .cols { grid-template-columns: 1fr; } }
+  .col-architect { border-top: 3px solid var(--architect); }
+  .col-builder { border-top: 3px solid var(--builder); }
+  .who { font-size: .74rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 700; }
+  .who.a { color: var(--architect); }
+  .who.b { color: var(--builder); }
+
+  ol.procedure { counter-reset: step; list-style: none; padding-left: 0; margin: 10px 0 0; }
+  ol.procedure li { counter-increment: step; position: relative; padding: 10px 0 10px 48px; border-bottom: 1px dashed var(--line); color: var(--muted); }
+  ol.procedure li strong { color: var(--ink); }
+  ol.procedure li:last-child { border-bottom: none; }
+  ol.procedure li::before {
+    content: counter(step); position: absolute; left: 0; top: 10px;
+    width: 30px; height: 30px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--architect), var(--builder));
+    color: #0b0d12; font-weight: 800; display: flex; align-items: center; justify-content: center;
+  }
+
+  .table-shell { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); margin: 14px 0; }
+  table { width: 100%; min-width: 700px; border-collapse: collapse; font-size: .92rem; background: rgba(18,26,43,.8); }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .6px; background: var(--panel2); }
+  td { color: var(--muted); }
+  td strong { color: var(--ink); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--panel2); }
+
+  .tag { display: inline-block; font-size: .72rem; padding: 2px 8px; border-radius: 6px; font-weight: 700; white-space: nowrap; }
+  .tag.win { background: rgba(76,195,138,.15); color: var(--green); }
+  .tag.concede { background: rgba(229,99,110,.15); color: var(--red); }
+  .tag.converge { background: rgba(110,168,254,.15); color: var(--architect); }
+  .pill { display: inline-flex; padding: .16rem .55rem; border: 1px solid currentColor; border-radius: 999px; font-size: .76rem; font-weight: 800; white-space: nowrap; }
+  .pill.code { color: var(--code); } .pill.model { color: var(--model); }
+  .pill.agent { color: var(--agent); } .pill.human { color: var(--human); }
+
+  code { background: var(--code-bg); padding: 2px 6px; border-radius: 5px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .85em; }
+  .formula {
+    background: var(--code-bg); border: 1px dashed rgba(86,215,255,.5); border-radius: 10px;
+    padding: 14px 16px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: .92rem; text-align: center; margin: 14px 0; color: #d4f0ff; overflow-x: auto;
+  }
+  ul { margin: 8px 0; padding-left: 22px; }
+  li { margin: 5px 0; }
+  .callout { border-left: 3px solid var(--green); background: rgba(76,195,138,.07); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 14px 0; color: var(--muted); }
+  .callout strong { color: var(--ink); }
+  .callout.warn { border-left-color: var(--builder); background: rgba(242,166,90,.07); }
+  .audio-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 420px); gap: 18px; align-items: center; }
+  .audio-card h3 { margin: 0 0 4px; }
+  .audio-card p { margin: 0; }
+  .audio-card audio { display: block; width: 100%; min-height: 42px; }
+  @media (max-width: 720px) { .audio-card { grid-template-columns: 1fr; } }
+
+  /* Architecture diagram (BUILDER) */
+  .architecture { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); gap: 1rem; align-items: stretch; margin: 14px 0; }
+  .architecture .lane { display: grid; gap: .7rem; }
+  .architecture .arrow { display: grid; place-items: center; color: var(--muted); font-size: 2rem; }
+  .node { padding: .9rem 1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+  .node small { display: block; margin-top: .3rem; color: var(--muted); }
+  .node.code { border-left: 4px solid var(--code); }
+  .node.agent { border-left: 4px solid var(--agent); }
+  .node.human { border-left: 4px solid var(--human); }
+  @media (max-width: 800px) {
+    .architecture { grid-template-columns: 1fr; }
+    .architecture .arrow { transform: rotate(90deg); }
+  }
+
+  /* Tier cards (BUILDER) */
+  .grid4 { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin: 14px 0; }
+  @media (max-width: 860px) { .grid4 { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 560px) { .grid4 { grid-template-columns: 1fr; } }
+  .tier { padding: 1.1rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+  .tier .icon { width: 2.3rem; height: 2.3rem; display: grid; place-items: center; margin-bottom: .7rem; border-radius: .7rem; font-weight: 900; }
+  .tier h3 { margin: 0 0 6px; }
+  .tier p { color: var(--muted); font-size: .9rem; margin: 0; }
+  .icon.code { color: var(--code); background: rgba(86,215,255,.12); }
+  .icon.model { color: var(--model); background: rgba(89,223,160,.12); }
+  .icon.agent { color: var(--agent); background: rgba(189,140,255,.12); }
+  .icon.human { color: var(--human); background: rgba(255,202,103,.12); }
+
+  .agree { border-top: 4px solid var(--green); }
+  .disagree { border-top: 4px solid var(--red); }
+  .checklist { columns: 2; column-gap: 2rem; padding-left: 1.2rem; }
+  .checklist li { break-inside: avoid; margin-bottom: .55rem; color: var(--muted); }
+  .checklist li::marker { color: var(--green); }
+  @media (max-width: 600px) { .checklist { columns: 1; } }
+
+  .footer { margin: 48px 0 60px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: .82rem; }
+  @media print {
+    :root { color-scheme: light; --bg:#fff; --panel:#fff; --panel2:#eef2f7; --ink:#132033; --muted:#42536a; --line:#c9d3df; --code-bg:#eef2f7; }
+    body { background: #fff; }
+    .site-header { position: static; background: #fff; }
+    section { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="site-header">
+  <nav class="nav wrap" aria-label="Primary navigation">
+    <div class="brand">Agents + Code — Fused Summary</div>
+    <ul>
+      <li><a href="#summary">Summary</a></li>
+      <li><a href="#when-to-use">When to use</a></li>
+      <li><a href="#answer">Answer</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#rounds">Rounds</a></li>
+      <li><a href="#allocation">Allocation</a></li>
+      <li><a href="#procedure">Procedure</a></li>
+      <li><a href="#concessions">Concessions</a></li>
+      <li><a href="#dispute">Dispute</a></li>
+      <li><a href="#checklist">Checklist</a></li>
+    </ul>
+  </nav>
+</div>
+
+<div class="wrap">
+
+<header class="hero">
+  <h1><span class="c">Code</span> governs. <span class="a">Agents</span> navigate ambiguity.</h1>
+  <div class="subtitle">Fused summary of a 6-round structured debate on how to divide work between deterministic code and LLM agents — and how much to lean on code alone. Merged from two independently written summaries of the same debate.</div>
+  <div class="badges">
+    <span class="badge architect">ARCHITECT — anthropic/claude-fable-5</span>
+    <span class="badge builder">BUILDER — openai/gpt-5.6-sol</span>
+    <span class="badge">6 rounds: opening → 4 rebuttals → closing</span>
+    <span class="badge fused">Fused: both sources merged, attributed inline</span>
+  </div>
+</header>
+
+<section id="summary">
+  <h2>Executive Summary — Both Sides of the Argument <span class="src f">Fused</span></h2>
+  <div class="cols">
+    <div class="card col-architect">
+      <div class="who a">The Architect's case</div>
+      <p><strong>Deterministic code should be the backbone, and agents should earn every node they occupy.</strong> Reliability degrades as probabilistic decisions compound, while code makes exact mechanics reproducible, testable, auditable, and cheap to run.</p>
+      <p>Code should own identity, permissions, secrets, durable state, budgets, retries, idempotency, audit logs, and irreversible effects. Agent costs extend beyond tokens: evaluation maintenance, silent semantic errors, prompt coupling, behavioral drift, and vendor-forced model migrations all matter.</p>
+      <p>For recurring, consequential systems, begin with a code-first prior. As agent behavior stabilizes, harvest exactly specified mechanics into code and leave agents only where interpretation, synthesis, or adaptive investigation remains necessary.</p>
+    </div>
+    <div class="card col-builder">
+      <div class="who b">The Builder's case</div>
+      <p><strong>Code-first becomes dogma when determinism is confused with correctness.</strong> A deterministic classifier can be reproducibly wrong; a cheap rule with poor recall is not superior to a model whose higher quality avoids expensive mistakes.</p>
+      <p>The objective is not minimum stochasticity but minimum total expected lifecycle cost at the required quality and safety. Use four tiers: deterministic code for exact mechanics, heuristics or specialized models for stable narrow prediction, bounded agents for open-ended adaptive work, and humans for high-consequence judgments that cannot be reliably validated.</p>
+      <p>Generation and acceptance are separate. Code may verify a patch that an agent is best equipped to generate. Agents can search, debug, investigate, and explore inside a sandbox while code controls tools, time, permissions, state, and final acceptance.</p>
+    </div>
+  </div>
+  <div class="card verdict">
+    <h3>Where the debate converged</h3>
+    <p>Both sides rejected the monolithic production skill where one agent owns planning, orchestration, policy, execution, and approval. The shared architecture is a <strong>deterministic control plane around the smallest adequate stochastic core</strong>: code owns authority; agents own bounded interpretation and adaptive work; independent checks or humans own acceptance.</p>
+    <p>When a property can be checked exactly, code checks it. Generation is selected economically by comparing code, heuristics, specialized models, agents, and humans against pre-registered quality, latency, privacy, cost, and maximum-loss thresholds.</p>
+    <p>The remaining disagreement is the default before measurements exist. The Architect leans toward code as recurrence and blast radius rise because agent lifecycle costs are harder to forecast. The Builder applies the same risk premium proportionally, resisting a universal code-first veto for low-risk, novel, reversible work.</p>
+  </div>
+  <div class="card audio-card">
+    <div>
+      <h3>Listen to the fused summary</h3>
+      <p class="muted">A narrated presentation of the Architect's case, the Builder's response, their convergence, and the remaining disagreement.</p>
+    </div>
+    <audio controls preload="metadata">
+      <source src="agents-vs-code-debate-summary.mp3" type="audio/mpeg">
+      Your browser does not support embedded audio. <a href="agents-vs-code-debate-summary.mp3">Download the MP3</a>.
+    </audio>
+  </div>
+</section>
+
+<section id="when-to-use">
+  <h2>Concrete “When to Use…” Guide <span class="src f">Operational shortcut</span></h2>
+
+  <h3 id="risk-novelty">Fast Default by Risk and Novelty</h3>
+  <p class="muted">Use novelty to estimate how much adaptive judgment the work needs, and risk to decide who may accept and execute the result. Volume and recurrence then determine how aggressively stable behavior should move into code.</p>
+  <div class="table-shell">
+    <table>
+      <thead>
+        <tr>
+          <th>Situation</th>
+          <th>Default</th>
+          <th>Production shape</th>
+          <th>Good examples</th>
+          <th>Acceptance &amp; safeguards</th>
+          <th>Evolution rule</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Low novelty + low risk</strong><br><span class="muted">Known inputs, clear rules, cheap failure</span></td>
+          <td><span class="pill code">Code alone</span></td>
+          <td>A small deterministic function or pipeline. Avoid model calls unless a measured quality gap justifies them.</td>
+          <td>Fixed-format parsing, file renaming, data conversion, routine API synchronization, simple report generation</td>
+          <td>Unit tests, runtime assertions, typed schemas, ordinary logs. Automated execution is usually acceptable.</td>
+          <td>Keep it boring. Reconsider only when requirements or input diversity make the deterministic implementation inadequate.</td>
+        </tr>
+        <tr>
+          <td><strong>High novelty + low risk</strong><br><span class="muted">Unknown path, reversible outcome</span></td>
+          <td><span class="pill agent">Agent-first exploration</span></td>
+          <td>A capable agent gets broad read access and bounded write/tool access inside a disposable or reversible environment.</td>
+          <td>Repository exploration, research, prototype generation, exploratory analysis, drafting internal tools</td>
+          <td>Sandbox, budget, timeout, activity trace, easy rollback. Human review can be lightweight because failure is cheap.</td>
+          <td>Do not prematurely build a pipeline. Observe repeated mechanics; extract only those that recur or become costly.</td>
+        </tr>
+        <tr>
+          <td><strong>Low novelty + high risk</strong><br><span class="muted">Known procedure, expensive failure</span></td>
+          <td><span class="pill code">Deterministic pipeline</span></td>
+          <td>Explicit stages with strict policy gates. Agents may explain or draft, but they do not own authority or state transitions.</td>
+          <td>Payments, access control, production deploys, database migrations, regulated exports, account changes</td>
+          <td>Strong invariants, approvals, idempotency, dry runs, audit logs, rollback, least privilege, fail-closed behavior.</td>
+          <td>Move toward more verification, not more autonomy. Use agents only for bounded advisory work with independent acceptance.</td>
+        </tr>
+        <tr>
+          <td><strong>High novelty + high risk</strong><br><span class="muted">Unknown path, expensive or irreversible failure</span></td>
+          <td><span class="pill agent">Agent proposes</span> <span class="pill human">Human authorizes</span></td>
+          <td><strong>Sandboxed agent proposes → code verifies → human authorizes → code executes.</strong> Separate investigation, approval, and effect.</td>
+          <td>Security incident remediation, novel production migrations, legal or financial exceptions, destructive infrastructure recovery</td>
+          <td>Isolated sandbox, evidence bundle, independent checks, qualified approver, two-person rule where warranted, staged execution and rollback.</td>
+          <td>After each case, harvest reusable checks, policies, and runbook mechanics into code without pretending the novel semantic core is solved.</td>
+        </tr>
+        <tr>
+          <td><strong>High volume</strong><br><span class="muted">Modifier across any quadrant</span></td>
+          <td><span class="pill code">Extract aggressively</span></td>
+          <td>Code owns batching, queues, retries, caching, state, validation, and routine branches; model calls remain only at irreducibly semantic nodes.</td>
+          <td>Support triage at scale, document processing, content moderation assistance, bulk enrichment, recurring compliance workflows</td>
+          <td>Representative eval sets, cost and latency budgets, drift monitoring, sampled review, escalation paths, backpressure.</td>
+          <td>Every repeated model behavior is a candidate for code, a heuristic, a cache, or a specialized model. Optimize the highest-volume path first.</td>
+        </tr>
+        <tr>
+          <td><strong>One-off work</strong><br><span class="muted">Modifier across any quadrant</span></td>
+          <td><span class="pill agent">Avoid pipeline overbuild</span></td>
+          <td>Use the smallest temporary harness that makes the work safe. Manual or agent-assisted execution can beat automation that will never amortize.</td>
+          <td>Single repository migration, ad hoc investigation, bespoke data cleanup, one-time competitive analysis</td>
+          <td>Scale review and rollback to failure cost. High-risk one-offs still require code checks and human authorization.</td>
+          <td>Build a reusable pipeline only when failure cost justifies it or evidence suggests the task will recur.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout"><strong>The core 2×2:</strong> low novelty + low risk → code alone; high novelty + low risk → agent-first exploration; low novelty + high risk → deterministic pipeline with strict policy gates; high novelty + high risk → sandboxed agent proposes, code verifies, human authorizes, code executes.</div>
+
+  <h3>Default by Work Type</h3>
+  <div class="table-shell">
+    <table>
+      <thead>
+        <tr><th>When the work looks like…</th><th>Use</th><th>Concrete examples</th><th>Required guardrail</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Exact, stable, and fully specifiable</strong></td>
+          <td><span class="pill code">Code</span></td>
+          <td>Authentication, payments, checksums, fixed-format parsing, state transitions, idempotency, retries</td>
+          <td>Unit tests, runtime assertions, typed interfaces, observability</td>
+        </tr>
+        <tr>
+          <td><strong>High-volume iteration, routing, or data movement</strong></td>
+          <td><span class="pill code">Code</span></td>
+          <td>Looping over records, queues, fan-out/fan-in, ETL, scheduling, backoff, persistence</td>
+          <td>Never make an LLM re-enact a <code>for</code> loop; checkpoint state and make operations idempotent</td>
+        </tr>
+        <tr>
+          <td><strong>Narrow prediction with stable labels but no exact per-instance predicate</strong></td>
+          <td><span class="pill model">Rules / small model</span></td>
+          <td>Spam filtering, anomaly scoring, entity matching, mature intent classification</td>
+          <td>Benchmark precision/recall and drift against an agent baseline; choose the cheapest adequate option</td>
+        </tr>
+        <tr>
+          <td><strong>Semantic transformation with clear inputs and outputs</strong></td>
+          <td><span class="pill agent">Bounded model call</span></td>
+          <td>Summarization, extraction from messy text, drafting, normalization, ticket interpretation</td>
+          <td>One natural semantic unit per call, structured output, code validation where possible, sampled evals elsewhere</td>
+        </tr>
+        <tr>
+          <td><strong>The next action depends on what is discovered</strong></td>
+          <td><span class="pill agent">Bounded agent loop</span></td>
+          <td>Debugging, incident investigation, repository exploration, research, migration planning</td>
+          <td>Sandbox, tool allowlist, budget, timeout, termination rule, durable trace, independent acceptance</td>
+        </tr>
+        <tr>
+          <td><strong>High-consequence semantic judgment without reliable validation</strong></td>
+          <td><span class="pill human">Human accepts</span></td>
+          <td>Medical, legal, security, financial exceptions; ambiguous destructive changes</td>
+          <td>Agent may gather evidence and propose, but a qualified human owns the decision and effect</td>
+        </tr>
+        <tr>
+          <td><strong>Low-stakes, reversible, and one-off</strong></td>
+          <td><span class="pill agent">Agent-first prototype</span></td>
+          <td>Internal scripts, exploratory analysis, early product experiments, throwaway migrations</td>
+          <td>Keep permissions narrow; only productionize after measuring quality and extracting stable mechanics</td>
+        </tr>
+        <tr>
+          <td><strong>Recurring and consequential, but semantically messy</strong></td>
+          <td><span class="pill code">Code shell</span> + <span class="pill agent">Agent core</span></td>
+          <td>Support operations, compliance review assistance, document workflows, large-scale content processing</td>
+          <td>Code owns orchestration and effects; benchmark the semantic node; add review/escalation by risk tier</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout">
+    <strong>Fast decision rule:</strong> If the behavior is exact, use code. If it is stable prediction, benchmark rules or a small model. If it requires semantic judgment, use a bounded model call. If the action path must adapt to discoveries, use a bounded agent loop. If failure is consequential and correctness cannot be checked, require a human.
+  </div>
+  <div class="callout warn">
+    <strong>Default before data:</strong> agent-first for novel, reversible experiments; code-first for recurring, high-volume, or high-blast-radius operations. In both cases, code retains authority over permissions, state, budgets, and irreversible effects.
+  </div>
+</section>
+
+<section id="question">
+  <h2>The Question</h2>
+  <div class="card">
+    <p><em>"Agents plus code beats agents alone and code alone — but how should work be separated? The 'agentic' approach throws everything into a single skill/agent. The 'code' approach builds a deterministic pipeline and uses agents only for what code can't do. How should we best use agents+code, and how much should we lean on code alone?"</em></p>
+  </div>
+</section>
+
+<section id="answer">
+  <h2>Bottom Line — The Answer That Survived <span class="src f">Both sources agree</span></h2>
+  <div class="card verdict">
+    <p><strong>Neither pure approach survived, and the monolithic "one big skill" lost unanimously for recurring production work.</strong> The winning shape is a deterministic control plane around the smallest adequate stochastic core <span class="src b">Builder</span> — expressed as a six-step decision procedure <span class="src a">Architect</span>:</p>
+    <ol class="procedure">
+      <li><strong>Code owns the control plane, always.</strong> State, routing, retries, budgets, authorization, irreversible effects, and final acceptance live in deterministic code. Agents live <em>inside</em> nodes of a code-owned graph — never as the top-level architecture.</li>
+      <li><strong>Allocate each node across four tiers</strong> — deterministic code, small/specialized model, bounded agent, human — choosing the <em>cheapest tier that meets pre-registered quality, latency, and risk thresholds</em>, costed by total lifecycle cost.</li>
+      <li><strong>Run the assertion test — but only for acceptance.</strong> If a checkable acceptance predicate exists, <em>code does the accepting</em>, never the agent grading itself. If the entire behavior is assertable (parsing, validation, state machines, iteration), code implements it outright: code hits the 100% ceiling and nothing stochastic beats a ceiling.</li>
+      <li><strong>Size agent work at natural semantic units.</strong> One call per judgment; a bounded multi-turn loop (code-owned budget &amp; termination) for exploratory nodes like debugging or incident investigation. Never shard a summary into paragraph calls; never make an LLM re-enact a <code>for</code> loop.</li>
+      <li><strong>Ratchet as you learn.</strong> Harvest stable mechanics (routing, formatting, escalation policy, validation) into code over time. One-way for assertable mechanics; bidirectional for semantic cores as models and input distributions change.</li>
+      <li><strong>When no benchmark data exists yet, lean code in proportion to recurrence &times; blast radius.</strong> Prototypes and low-stakes tools go agent-first; payments, migrations, and high-volume recurring flows go code-first, with agents earning each node.</li>
+    </ol>
+  </div>
+  <div class="callout"><strong>Practical rule</strong> <span class="src b">Builder</span>: code owns authority, state, budgets, validation, and irreversible effects; agents own bounded semantic judgment and adaptive tool use; humans own consequential decisions that cannot be reliably checked.</div>
+</section>
+
+<section id="architecture">
+  <h2>The Production Shape <span class="src b">Builder</span></h2>
+  <p class="muted">An autonomous loop can be the right implementation <em>inside</em> a node. It should not become the top-level authority boundary.</p>
+  <div class="architecture" aria-label="Code-governed agent architecture">
+    <div class="lane">
+      <div class="node code"><strong>1. Code admits the request</strong><small>Authenticate, authorize, normalize, retrieve scoped context.</small></div>
+      <div class="node code"><strong>2. Code establishes limits</strong><small>Tools, permissions, token and time budget, termination, audit trail.</small></div>
+      <div class="node code"><strong>3. Code manages state</strong><small>Retries, idempotency, checkpoints, durable workflow status.</small></div>
+    </div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="lane">
+      <div class="node agent"><strong>4. Agent performs bounded work</strong><small>Interpret, investigate, synthesize, choose permitted tools, propose candidates.</small></div>
+      <div class="node code"><strong>5. Independent acceptance</strong><small>Assertions and tests where possible; evaluations or human review otherwise.</small></div>
+      <div class="node human"><strong>6. Controlled effect</strong><small>Code executes approved changes; humans approve high-loss unassertable decisions.</small></div>
+    </div>
+  </div>
+</section>
+
+<section id="openings">
+  <h2>Opening Positions <span class="src a">Architect</span></h2>
+  <div class="cols">
+    <div class="card col-architect">
+      <div class="who a">ARCHITECT — Round 1</div>
+      <p><strong>Code is the backbone;</strong> agents are narrow, schema-bounded components used only where judgment, ambiguity, or unstructured input make code impossible. Key arguments: multiplicative reliability (five 99.9% stages ≈ 99.5% end-to-end vs. one agent doing five implicit 95% steps ≈ 77%); code is where testing/regression control live; token cost curves; small clean contexts help the agent itself; a one-way ratchet harvesting agent solutions into code.</p>
+    </div>
+    <div class="card col-builder">
+      <div class="who b">BUILDER — Round 1</div>
+      <p><strong>Code-governed, agent-assisted:</strong> code owns control flow, state, permissions, validation, irreversible effects; agents get bounded decisions whose specs can't be encoded <em>economically</em>. Boundary = "uncertainty vs. authority"; pattern = "agent proposes, code disposes." Cited SWE-agent (2.80% → 12.47% on SWE-bench via interface design) and Agentless (27.33% on SWE-bench Lite via explicit decomposition).</p>
+    </div>
+  </div>
+  <div class="callout warn"><strong>Notable:</strong> both agents converged on rejecting the monolithic single-skill approach in Round 1. The real debate became <em>where the boundary sits, what rule sets it, and which way it moves</em>.</div>
+</section>
+
+<section id="rounds">
+  <h2>Round-by-Round: Key Exchanges <span class="src a">Architect</span> <span class="src b">Builder narrative</span></h2>
+  <div class="table-shell">
+  <table>
+    <tr><th style="width:9%">Round</th><th style="width:46%">Attack</th><th>Outcome</th></tr>
+    <tr>
+      <td>R2</td>
+      <td><span class="who a">ARCHITECT</span> SWE-agent is an <em>autonomous loop</em>, not deterministic orchestration — BUILDER stapled the wrong conclusion to it; both BUILDER citations come from one-shot novelty benchmarks and can't support a production-workload prediction; "uncertainty ⇒ agent" over-provisions (fuzzy dedup, spam classification are uncertain but belong to small models).</td>
+      <td><span class="tag win">Landed</span> BUILDER later conceded the SWE-agent over-attribution and that SWE-bench doesn't substantiate its production prediction.</td>
+    </tr>
+    <tr>
+      <td>R3</td>
+      <td><span class="who b">BUILDER</span> "Assertion test contradicts itself" (verification ≠ generation); "only code has testing" is false (statistical evals exist); Anthropic guidance endorses agents when steps can't be predicted.</td>
+      <td><span class="tag concede">Partly conceded</span> ARCHITECT split the rule: assertion test governs <em>acceptance</em>, cheapest-adequate-generator governs <em>generation</em>; conceded "only" as overclaim; showed "code defines budget/permissions/termination" = a node in a code-owned graph.</td>
+    </tr>
+    <tr>
+      <td>R4</td>
+      <td><span class="who a">ARCHITECT</span> "Shrinking ≠ sharding" — moving work to code strictly reduces stochastic surface; splitting one semantic task into many model calls was never the proposal. BUILDER's four-factor balancing test is a factor list, not a runnable decision procedure. Frontier-vs-territory: cheap tokens expand the agent frontier but never reclaim well-codified territory.</td>
+      <td><span class="tag win">Landed</span> BUILDER conceded shrink/shard distinction and that token price alone never justifies replacing correct deterministic code — then answered the procedure charge with its own 6-step pre-registered benchmark protocol.</td>
+    </tr>
+    <tr>
+      <td>R5</td>
+      <td><span class="who b">BUILDER</span> Unit tests aren't guarantees (Dijkstra); a keyword router can silently misroute despite passing tests; the "premature crystallization" defense risks circularity; burden of proof should scale with blast radius, not sit universally on agents.</td>
+      <td><span class="tag concede">Split</span> ARCHITECT: the keyword-router example is <em>forbidden ex ante</em> by the assertion test (no acceptance predicate for "routed correctly"); stated a falsification condition for the ratchet (find teams de-codifying parsers/checksums/state machines — none exist). Conceded burden scales with recurrence &times; blast radius.</td>
+    </tr>
+    <tr>
+      <td>R5</td>
+      <td><span class="who a">ARCHITECT</span> BUILDER's own citation — Sculley et al. 2015, <em>Hidden Technical Debt in ML Systems</em> — cuts against the citer: CACE ("Changing Anything Changes Everything") and entanglement are debt classes of <em>stochastic</em> components, and CACE applies verbatim to prompts. Plus the unanswered point: <strong>code changes when you change it; a hosted model changes when the vendor deprecates it.</strong></td>
+      <td><span class="tag win">Landed &amp; unanswered</span> BUILDER conceded code's superior local regression guarantees; vendor-scheduled change was never rebutted. This funds the code-leaning prior.</td>
+    </tr>
+    <tr>
+      <td>R6</td>
+      <td><span class="who b">BUILDER</span> Closing synthesis: four tiers — code, specialized models, agents, humans — with broad causal claims from software-agent benchmarks dropped by both sides. Stable mechanics ratchet into code; semantic components remain subject to measurement.</td>
+      <td><span class="tag converge">Converged</span> The useful result was convergence through correction, not victory for either initial slogan.</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="surviving">
+  <h2>Load-Bearing Arguments That Survived <span class="src a">Architect</span></h2>
+  <div class="card">
+    <ul>
+      <li><strong>Multiplicative reliability, at matched adequacy.</strong> 0.999<sup>5</sup> ≈ 0.995 vs 0.95<sup>5</sup> ≈ 0.774. Scoped by BUILDER's correct objection: adequacy is checked first; minimizing stochastic surface is the tie-breaker among adequate options, not the objective.</li>
+      <li><strong>Assertable-task dominance.</strong> For behaviors with a checkable spec, code reaches the quality ceiling; a stochastic component at best ties on quality and must lose on cost, latency, and audit. The mechanics ratchet is one-way as <em>dominance, not empirical bet</em> — with a stated, unmet falsification condition.</li>
+      <li><strong>The verification-regime gap.</strong> Per-instance checks of encoded properties: ~zero marginal cost, instant, loud. Statistical evals: labeled datasets, real dollars per run, lagging detection. (Scoped to encoded properties per Dijkstra's caveat: tests show presence, not absence.)</li>
+      <li><strong>The variance asymmetry.</strong> Agent-path cost terms (P(error), maintenance, silent-error loss) carry higher <em>estimation variance</em> — CACE/entanglement (Sculley et al. 2015) plus vendor-scheduled model deprecations. Optimizing under asymmetric variance means biasing the default toward the estimable option: code.</li>
+      <li><strong>Architecture scoping of the evidence.</strong> Anthropic's workflow/agent guidance selects <em>which nodes</em> get autonomous loops ("steps cannot be predicted"), not which architecture wins; SWE-agent's 2.80%→12.47% shows interface quality matters <em>inside</em> a bounded loop. Both support a code-owned graph with autonomy inside nodes.</li>
+    </ul>
+  </div>
+  <div class="formula">TOTAL = C<sub>build</sub> + C<sub>run</sub> + C<sub>eval</sub> + C<sub>maintenance</sub> + P(error) &times; Loss(error) &nbsp;—&nbsp; subject to pre-registered quality / latency / risk thresholds</div>
+</section>
+
+<section id="allocation">
+  <h2>Allocate by Task Shape <span class="src f">Fused</span></h2>
+  <p class="muted">Do not optimize for the fewest agent calls or the most deterministic code. Optimize for required quality and total harm-adjusted lifecycle cost. <span class="src b">Builder</span></p>
+  <div class="grid4">
+    <article class="tier">
+      <div class="icon code">{ }</div>
+      <h3>Deterministic code</h3>
+      <p><strong>Stable, exact specifications:</strong> payments, checksums, permissions, state machines, fixed parsers, iteration, retries, schema validation.</p>
+    </article>
+    <article class="tier">
+      <div class="icon model">ƒ</div>
+      <h3>Specialized model</h3>
+      <p><strong>Stable, narrow prediction:</strong> spam scores, anomaly detection, entity matching, classification at high volume.</p>
+    </article>
+    <article class="tier">
+      <div class="icon agent">↻</div>
+      <h3>Bounded agent</h3>
+      <p><strong>Unknown trajectory:</strong> debugging, incident investigation, repository exploration, research, migration planning.</p>
+    </article>
+    <article class="tier">
+      <div class="icon human">✓</div>
+      <h3>Human decision</h3>
+      <p><strong>High-loss, unassertable judgments:</strong> medical, legal, financial, security, unusual production exceptions.</p>
+    </article>
+  </div>
+
+  <h3>Cheat sheet: workload → tier → guardrail <span class="src a">Architect workloads</span> <span class="src b">Builder guardrails</span></h3>
+  <div class="table-shell">
+  <table>
+    <tr><th>Workload</th><th>Lean</th><th>Why</th><th>Required guardrail</th></tr>
+    <tr>
+      <td>Payments, auth, migrations, compliance, high-volume ETL</td>
+      <td><span class="pill code">Code-first</span></td>
+      <td>Knowable contracts &amp; invariants; high recurrence &times; blast radius; assertable end to end.</td>
+      <td>Tests plus runtime invariants.</td>
+    </tr>
+    <tr>
+      <td>Spam/intent classification, entity matching, fuzzy dedup</td>
+      <td><span class="pill model">Specialized model</span></td>
+      <td>Uncertain but stable and narrow; small models beat agents on cost, latency, reproducibility.</td>
+      <td>Held-out quality metrics and drift monitoring.</td>
+    </tr>
+    <tr>
+      <td>Ticket triage, summarization, bug localization, code synthesis</td>
+      <td><span class="pill agent">Agent node</span></td>
+      <td>Semantic core with no acceptance predicate; wrap with code-checked validation of whatever <em>is</em> checkable.</td>
+      <td>Typed outputs; held-out semantic evaluation.</td>
+    </tr>
+    <tr>
+      <td>Debugging, incident investigation, legacy exploration</td>
+      <td><span class="pill agent">Bounded agent loop</span></td>
+      <td>Steps can't be predicted per-instance; code owns budget, permissions, termination, acceptance.</td>
+      <td>Sandbox, least privilege, budget, independent acceptance.</td>
+    </tr>
+    <tr>
+      <td>Prototypes, one-offs, low-stakes internal tools</td>
+      <td><span class="pill agent">Agent-first</span></td>
+      <td>Low recurrence &times; blast radius discharges the burden trivially; building the pipeline may cost more than the experiment.</td>
+      <td>Log outcomes; extract mechanics into code if it recurs.</td>
+    </tr>
+    <tr>
+      <td>High-stakes unverifiable outputs (medical, legal)</td>
+      <td><span class="pill human">Human in the loop</span></td>
+      <td>Risk pricing selects human review where neither assertions nor evals suffice.</td>
+      <td>Named accountable approver.</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="procedure">
+  <h2>A Runnable Decision Procedure <span class="src b">Builder</span></h2>
+  <p class="muted">BUILDER's answer to ARCHITECT's "factor list isn't a procedure" charge: make allocation falsifiable by setting thresholds before comparing implementations.</p>
+  <ol class="procedure">
+    <li><strong>Set acceptance thresholds.</strong> Pre-register required quality, latency, privacy, cost, observability, and maximum-loss limits.</li>
+    <li><strong>Hard-gate authority.</strong> Keep identity, authorization, durable state, and irreversible effects in deterministic code or accountable human review.</li>
+    <li><strong>Build the cheapest credible baselines.</strong> Compare a deterministic rule or solver, a specialized model, and a bounded agent where each is viable.</li>
+    <li><strong>Reject inadequate candidates.</strong> A nearly free regex with unacceptable recall is not cheaper; it is disqualified.</li>
+    <li><strong>Price the entire lifecycle.</strong> Include implementation, inference, evaluation, maintenance, vendor migration, detection lag, and expected error loss.</li>
+    <li><strong>Deploy reversibly and re-evaluate.</strong> Use replay or shadow traffic first, monitor drift, and rerun the comparison when models, data, or requirements change.</li>
+  </ol>
+  <div class="callout warn"><strong>Default before data</strong> <span class="src f">Both converged</span>: choose code-first for recurring, consequential operations; choose agent-first for novel, reversible experiments. The prior scales with recurrence &times; blast radius.</div>
+</section>
+
+<section id="concessions">
+  <h2>Honest Concessions Ledger <span class="src a">Architect</span></h2>
+  <div class="card">
+    <h3 style="margin-top:0">ARCHITECT conceded:</h3>
+    <ul>
+      <li><span class="tag concede">Dropped</span> <strong>"Agents only where code is impossible."</strong> Wrong boundary — it's lifecycle economics ("cheapest adequate"), not possibility. BUILDER was right from Round 1.</li>
+      <li><span class="tag concede">Dropped</span> <strong>"Only code has testing/debugging."</strong> Statistical evals, replay, shadow traffic are real. The regime <em>gap</em> survives; the "only" did not.</li>
+      <li><span class="tag concede">Dropped</span> <strong>"One hard sub-problem per call."</strong> Exploratory work (debugging, incident investigation) needs bounded multi-turn loops.</li>
+      <li><span class="tag concede">Withdrawn</span> <strong>The causal leaderboard claim</strong> ("agentic scaffolds decisively overtook Agentless") — uncontrolled comparison; all benchmark evidence exited as proof of universal law, from both sides.</li>
+      <li><span class="tag concede">Demoted</span> <strong>Minimize-stochastic-surface as objective</strong> → tie-breaker. A deterministic rule wrong 20% of the time loses to a model wrong 3%.</li>
+      <li><span class="tag concede">Scoped</span> <strong>Universal burden of proof on agents</strong> → burden scales with recurrence &times; blast radius; prototypes rationally start agent-first.</li>
+      <li><span class="tag concede">Narrowed</span> <strong>The ratchet</strong>: one-way for assertable mechanics only; semantic implementations may move either direction.</li>
+    </ul>
+    <h3>BUILDER conceded symmetrically:</h3>
+    <ul>
+      <li>SWE-agent over-attribution (it's an autonomous loop, not deterministic orchestration).</li>
+      <li>Validation insufficiency: "agent proposes, code disposes" is necessary, not sufficient.</li>
+      <li>Pipelines/small models win stable high-volume work.</li>
+      <li>Its production prediction lacked evidence; SWE-bench can't carry it.</li>
+      <li>Shrink ≠ shard; token price alone never justifies de-codifying correct deterministic code.</li>
+      <li>Code-owned top level.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="dispute">
+  <h2>Agreements &amp; the Live Disagreement <span class="src f">Fused</span></h2>
+  <div class="cols">
+    <article class="card agree">
+      <h3 style="margin-top:0">What survived as agreement <span class="src b">Builder</span></h3>
+      <ul>
+        <li>Code owns the top-level control plane.</li>
+        <li>Agents can own multi-turn exploration inside bounded nodes.</li>
+        <li>Assertions and tests accept outputs where they encode the requirement.</li>
+        <li>Plausible-but-wrong semantic output requires evaluations or people, not schemas alone.</li>
+        <li>Stable mechanics should be harvested into code.</li>
+        <li>Learned systems incur evaluation, drift, and provider-migration costs.</li>
+        <li>High-volume narrow prediction may belong to a specialized model, not a general agent.</li>
+      </ul>
+    </article>
+    <article class="card disagree">
+      <h3 style="margin-top:0">What remains disputed <span class="src b">Builder</span></h3>
+      <ul>
+        <li><strong>Default burden:</strong> universal code-first versus a prior scaled to consequence and reversibility.</li>
+        <li><strong>Assertion scope:</strong> whether lack of a per-instance predicate should prohibit deterministic semantic heuristics.</li>
+        <li><strong>Estimation risk:</strong> whether agent lifecycle costs are universally less estimable or only workload-dependent.</li>
+        <li><strong>Boundary direction:</strong> exact mechanics move one way into code; recurring semantic implementations may still move either way.</li>
+      </ul>
+    </article>
+  </div>
+  <div class="cols">
+    <div class="card col-architect">
+      <div class="who a">ARCHITECT holds</div>
+      <p>Most boundary decisions happen <em>before</em> benchmarks are affordable. There, the default must lean code for recurring, consequential work — because the agent path's cost terms carry provably higher estimation variance (CACE, vendor-scheduled change). And the ratchet is one-way for assertable mechanics as a matter of <em>dominance</em>.</p>
+    </div>
+    <div class="card col-builder">
+      <div class="who b">BUILDER holds</div>
+      <p>No universal code-first prior and no one-way semantic ratchet: the objective is expected harm-adjusted lifecycle performance; the prior should vary with blast radius, volume, novelty, and reversibility; allocation should be settled per-workload by pre-registered benchmarks, and even mechanics stay open to re-benchmarking as model reliability improves.</p>
+    </div>
+  </div>
+  <div class="callout">
+    <strong>What would settle it</strong> <span class="src a">Architect</span> <span class="src b">Builder</span>: matched-quality production A/Bs on recurring workloads over 18–24 months <em>including at least one forced model deprecation or material requirement change</em> — tracking engineering time, incidents, silent-error detection delay, latency, evaluation maintenance, and migration cost. For the ratchet: a single documented case of teams rationally replacing working parsers, checksums, or state machines with LLM calls. If that case surfaces, the one-way ratchet breaks.
+  </div>
+</section>
+
+<section id="checklist">
+  <h2>Production Checklist <span class="src b">Builder</span></h2>
+  <p class="muted">If an agent node cannot satisfy these controls, it is still a prototype.</p>
+  <div class="card">
+    <ul class="checklist">
+      <li>Named owner and bounded business purpose</li>
+      <li>Scoped inputs and deliberate context selection</li>
+      <li>Least-privilege, allow-listed tools</li>
+      <li>No direct ownership of secrets or authorization policy</li>
+      <li>Token, time, iteration, and spending budgets</li>
+      <li>Typed outputs where structure is knowable</li>
+      <li>Runtime assertions for exact invariants</li>
+      <li>Held-out semantic evaluation for judgment quality</li>
+      <li>Human approval for unassertable high-loss effects</li>
+      <li>Idempotency and safe retry behavior</li>
+      <li>Complete trace and model/prompt version records</li>
+      <li>Fallback, escalation, and kill switch</li>
+      <li>Shadow deployment before consequential authority</li>
+      <li>Drift and incident monitoring</li>
+      <li>Provider migration plan</li>
+      <li>Periodic review for mechanics to extract into code</li>
+    </ul>
+  </div>
+</section>
+
+<section id="evidence">
+  <h2>Evidence Discipline <span class="src b">Builder</span></h2>
+  <div class="card">
+    <p>The debate referenced SWE-agent, Agentless, and Sculley et al.'s <em>Hidden Technical Debt in Machine Learning Systems</em>. The final position uses them only for their narrow lessons: interfaces matter, explicit decomposition can be viable, and learned systems introduce distinctive technical debt. It does <strong>not</strong> treat benchmark leaderboard results as proof of a universal production architecture — a discipline both sides ultimately enforced on each other <span class="src a">Architect: withdrawn leaderboard claim</span> <span class="src a">Architect: SWE-bench scoping of BUILDER's citations</span>.</p>
+  </div>
+</section>
+
+<div class="footer">
+  <strong>Bottom line:</strong> lean heavily on code for authority and stable mechanics; lean on agents for bounded, reversible work where semantic flexibility earns its lifecycle cost.<br><br>
+  Fused from two independent summaries of the same 6-round debate: ARCHITECT (anthropic/claude-fable-5) and BUILDER (openai/gpt-5.6-sol).<br>
+  Sources cited during the debate: Yang et al., <em>SWE-agent</em> (2024) · Xia et al., <em>Agentless</em> (2024) · Sculley et al., <em>Hidden Technical Debt in Machine Learning Systems</em> (NeurIPS 2015; "high-interest credit card" phrase from the 2014 predecessor workshop paper) · Anthropic, <em>Building Effective Agents</em> (2024) · Dijkstra on testing · Lehman's laws of software evolution.
+</div>
+
+</div>
+</body>
+</html>

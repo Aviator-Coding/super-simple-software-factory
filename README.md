@@ -18,7 +18,12 @@ A software factory does one thing: it gives you more leverage on your prompt. Ho
 Everyone can get an agent to write code once. Almost nobody gets the same result twice. This fixes that by moving the control plane out of the prompt and into Python. An ADW script (AI Developer Workflow) owns sequencing, retries, and acceptance. Agents work inside named phases. Typed JSON envelopes carry context across the seams. Every event streams into SQLite while it is still happening. **Agent proposes, code disposes.**
 
 > [!NOTE]
-> **This branch is the skill alone**, which is the thing you install. For a repo with the factory already stamped into it, a demo app it planned, built, tested, reviewed, and documented, and the real traces from those runs, see the **[`example` branch](../../tree/example)**.
+> **You are on the `example` branch**: the skill plus a repo it has already been stamped into.
+> A populated `adws/`, a `justfile`, a demo app the factory planned, built, tested, reviewed,
+> and documented, and the real specs, docs, and traces those runs produced. To install the
+> factory somewhere, you want the skill alone on the **[`main` branch](../../tree/main)**.
+>
+> Skill work happens on `main` and merges forward into this branch.
 
 ---
 
@@ -54,7 +59,12 @@ Two steps: get the skill into your repo, then stamp the factory.
 
 ### Agentic Install
 
-Copy `.claude/skills/sssf/` into the target repo and type `/sssf install` inside Claude Code. The skill is named `sssf`, so that is the skill name followed by the `install` argument. There is no bare `/install` command. The agent reads the skill's own `cookbooks/install.md` and does the rest.
+```bash
+just cc "install the sssf factory into this repo and run the smoke test"   # Claude Code
+just pi "install the sssf factory into this repo and run the smoke test"   # Pi
+```
+
+Both recipes boot a coding agent that reads `cookbooks/sssf_overview.md`, adopts the orchestrator rules, and lazy-loads `cookbooks/install.md` for the actual stamp. Inside Claude Code you can also just type `/sssf install`. The skill is named `sssf`, so that is the skill name followed by the `install` argument. There is no bare `/install` command.
 
 ### Manual Install
 
@@ -280,26 +290,67 @@ It resolves its target through `--db`, then `SSSF_DB`, then `<cwd>/adws/adw_data
 
 ---
 
-## What is in this branch
+## Folder structure
 
 ```
-super-simple-software-factory/          # the deployable factory, and nothing else
-└── .claude/skills/sssf/
-    ├── SKILL.md                        # hard rules + request routing table
-    ├── cookbooks/                      # 9 orchestrator playbooks, loaded lazily
-    ├── references/                     # config / handoff / observability specs
-    ├── scripts/                        # install.py, make_config.py, make_adw.py
-    ├── apps/visualizer/                # the read-only trace UI (Vue + Vite on Bun)
-    └── templates/                      # EXACTLY what install.py stamps
-        ├── sssf.config.yaml            # the starter roster
-        ├── prompt_engineering/{agent}/ # system.md + user.md per agent
-        ├── harness_engineering/        # pi extensions
-        └── adws/
-            ├── adw_*.py                # the twelve starter workflows
-            └── adw_modules/            # ALL low-level logic, ADW scripts stay thin
+super-simple-software-factory/
+├── .claude/skills/sssf/           # THE PRODUCT, the deployable factory
+│   ├── SKILL.md                   # hard rules + request routing table
+│   ├── cookbooks/                 # 9 orchestrator playbooks, loaded lazily
+│   ├── references/                # config / handoff / observability specs
+│   ├── scripts/                   # install.py, make_config.py, make_adw.py
+│   └── templates/                 # exactly what /sssf install stamps
+│
+│   .. everything below is stamped output, this repo is the first target ..
+│
+├── justfile                       # orchestrator, ADW, trace, and UI recipes
+├── adws/
+│   ├── adw_sssf_config/           # the agent roster
+│   │   └── sssf.config.yaml
+│   ├── adw_prompt.py              # smallest ADW, one agent, one prompt
+│   ├── adw_scout.py               # read-only recon
+│   ├── adw_plan.py                # plan only
+│   ├── adw_build.py               # build only, no plan
+│   ├── adw_quality.py             # deterministic lint/typecheck/build, no agents
+│   ├── adw_plan_build.py          # planner → builder → git commit
+│   ├── adw_build_test.py          # builder → code(test), bounded fix loop
+│   ├── adw_build_review.py        # builder → reviewer, bounded revise loop
+│   ├── adw_plan_build_test.py     # plan → build → code(test), MAX_FIX_LOOPS=3
+│   ├── adw_plan_build_test_quality.py  # same, plus lint/typecheck/build gates
+│   ├── adw_document.py            # write up the work just done, from git diff vs main
+│   ├── adw_simple_sdlc.py         # plan → build → test → review → document, 3 commits
+│   ├── adw_modules/               # ALL low-level logic; ADW scripts stay thin
+│   │   ├── data_types.py          # AgentCall, PhaseParams, Phase, envelope types
+│   │   ├── agents.py              # load_config, validate, resolve to interface
+│   │   ├── runner.py              # the Run object, run.phase(...) → ph.call(...)
+│   │   ├── agent_pi.py            # Pi interface (v1)
+│   │   ├── agent_cc.py            # Claude Code interface (v2, stubbed)
+│   │   ├── gates.py               # gate(envelope, run) -> list[str] violations
+│   │   ├── changes.py             # git diff vs a resolved base → ChangeSet → envelope
+│   │   ├── tracer.py              # events → jsonl + sqlite, as they happen
+│   │   ├── session.py             # mint or join adw_id, maintain agent_map.json
+│   │   ├── prompts.py             # render system/user prompts + placeholders
+│   │   ├── console.py             # one narrative, two destinations, stdout + log events
+│   │   ├── git_helper.py          # is_repo, branch, commit_all, changed_files, diff
+│   │   └── utils.py               # subprocess env, logging, prompt resolution
+│   └── adw_data/
+│       ├── prompt_engineering/    # tracked, YOUR prompts live here
+│       │   └── {agent}/           # system.md (identity) + user.md (task + report contract)
+│       ├── sessions/{adw_id}/     # gitignored runtime
+│       │   ├── agent_map.json     # agent → coding-agent session_id + model
+│       │   ├── context_handoff/   # the one place agents write files for each other
+│       │   └── {agent}/           # prompts/, raw_output.jsonl, envelope.json
+│       └── sssf.db                # gitignored SQLite trace db
+│
+├── apps/inkwell/                  # the demo app an ADW built, tested, and validated
+├── specs/                         # plans the planner wrote during real runs
+│   └── scaffold.md                # the build spec this whole repo was generated from
+├── app_docs/                      # write-ups the documenter produced from real diffs
+└── ai_docs/                       # the code-vs-agents debate summaries behind the doctrine
 ```
 
-The skill is also what an agent reads to *operate* the factory. `SKILL.md` is the central idea, and the cookbooks are lazily loaded recipes it pulls in one at a time: set up the factory, create an ADW, modify a chain, add an agent, run and monitor. If you can teach an agent to do something, teach it, then go build the thing it cannot.
+`specs/` and `app_docs/` are not hand-written. Every file in them is an artifact some
+agent produced during a real run, named with the `adw_id` that produced it.
 
 ---
 
@@ -343,7 +394,82 @@ sqlite3 adws/adw_data/sssf.db "select seq, name, kind, owner, status from phases
 sqlite3 adws/adw_data/sssf.db "select kind, name, pid, command from processes where adw_id='a1b2c3d4' and ended_at is null;"
 ```
 
-Reads never block a running workflow, the db is WAL. `install.py` stamps a `justfile` wrapping all of the above, so in a fresh repo these are `just sessions`, `just phases <adw_id>`, `just tail <adw_id>`, and `just procs <adw_id>`.
+Reads never block a running workflow, the db is WAL. `install.py` stamps a starter `justfile` wrapping these, so a freshly stamped repo gets `just sessions`, `just phases <adw_id>`, `just tail <adw_id>`, and `just procs <adw_id>` out of the box. This repo's own justfile, below, is that starter grown up: it has been customised, which is exactly what is supposed to happen to it.
+
+---
+
+## Commands
+
+```bash
+just                                       # list every recipe
+
+# boot an orchestrator agent ON the factory
+just cc "add a reviewer agent to the roster"     # Claude Code
+just pi "why did adw f2f7f429 fail"              # Pi
+just ipi "add a gate to the builder call"        # Pi + your own harness extensions
+
+# run a workflow directly (args pass straight through)
+just prompt "summarize this repo"                # one agent, one prompt
+just ask scout "where does auth live"            # pick the agent by name
+just scout "where is auth handled"               # read-only recon
+just plan "add a /health endpoint"               # plan only
+just plan-build "add a /health endpoint"         # planner → builder → commit
+just build-test "implement the plan"             # builder → code(test) with fix loop
+just build-review "implement the plan"           # builder → reviewer, is it what was asked for?
+just document "write up what just shipped"       # documenter, off git diff vs main
+just sdlc "add a /health endpoint"               # plan → build → test → commit
+just simple-sdlc "add a /health endpoint"        # + review + docs, commits plan, code, docs separately
+
+# watch it
+just sessions                                    # the last 10 runs
+just phases <adw_id>                             # phase status in sequence
+just tail <adw_id>                               # the live event tail
+just obs                                         # the web UI on the same db
+just rosters                                     # which rosters exist, and the model each agent runs
+just procs <adw_id>                              # what a run has alive right now, with pids
+just kill <adw_id>                               # stop a stuck run, children first, then the workflow
+```
+
+The orchestrator recipes and the raw recipes are two different postures. `just cc` and `just pi` boot an agent that runs the system, observes it, and helps you interact with it, and that agent is explicitly forbidden from doing the ADW's work itself. `just sdlc` and friends just launch the workflow.
+
+Every ADW takes the same shape: `uv run adws/adw_*.py "<prompt or path/to/prompt.md>" [--config adws/adw_sssf_config/sssf.config.yaml] [--adw-id a1b2c3d4]`. The justfile passes that path for you and honors a `SSSF_CONFIG` override, so `SSSF_CONFIG=other.yaml just sdlc "..."` swaps the whole roster for one run.
+
+---
+
+## Run it end to end
+
+Start with the smallest possible run and read the trace before you trust anything bigger.
+
+```bash
+uv run adws/adw_prompt.py "reply with a one-line summary of this repo"
+# adw_id: f2f7f429
+
+just phases f2f7f429
+# 1|request|engineer|IndyDevDan|success
+# 2|prompt|agent|scout|success
+
+just sessions
+# f2f7f429|success|Look at the root of this repository...|94199|0.0247
+```
+
+`--adw-id` is optional on every ADW. Omit it and a fresh id is minted and printed. Supply it and the run joins that session, or creates it pinned to exactly that id: same dirs, same `context_handoff/`, envelopes appended, and each agent **resumes its existing context window** through `agent_map.json` instead of starting cold. That is how you chain workflows, planning under one id and then building under the same one.
+
+```bash
+uv run adws/adw_plan.py "add a /health endpoint"              # prints adw_id a1b2c3d4
+uv run adws/adw_build_test.py "implement the plan" --adw-id a1b2c3d4
+```
+
+`apps/inkwell/` is the proof that the chain closes. A minimal blog writer (Bun plus `bun:sqlite`, zero dependencies, drafts and an editor and one-click publish) planned, built, tested, and browser-validated through the factory:
+
+<p align="center">
+  <img src="images/07_inkwell_validated.png" alt="The inkwell demo app running in a browser, showing the post list, editor, word count, and publish controls" width="780">
+</p>
+
+```bash
+cd apps/inkwell
+bun run server.ts   # http://localhost:4501
+bun test            # end-to-end API suite against a temp db
+```
 
 ---
 
@@ -390,17 +516,6 @@ Where to start, roughly in the order that pays off fastest:
 And what it deliberately does not do. It runs on your current branch. There is no sandbox, no branch per run, no merge step, no cloud, and no human-in-the-loop approval phase. Those are the obvious next things to build. They are left out so the core stays small enough to read in one sitting, which is the only reason you would trust it enough to change it.
 
 So take it. Fork it, strip the parts you do not need, rename the agents, throw out half the workflows, and roll what is left into the factory your product actually needs. The specific chains in here matter far less than the shape: code owns the loop, agents own the phases, and every run leaves a trace you can go read.
-
----
-
-## See it in a real repo
-
-The [`example` branch](../../tree/example) is this same skill with the factory already stamped in: a populated `adws/`, a `justfile`, a demo app the factory planned, built, tested, reviewed, and documented, and the specs, docs, and traces those runs produced.
-
-```bash
-git clone <this-repo> sssf && cd sssf
-git checkout example
-```
 
 ---
 

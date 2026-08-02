@@ -133,8 +133,6 @@ Thumbs.db
 *~
 
 # ─── Misc ─────────────────────────────────────────────────
-# Kept on every branch even where the directory does not exist: these rules are
-# what stop 54M of PNG mocks from being swept in by a `git add -A`.
 prototypes/
 *.log
 logs/
@@ -154,7 +152,7 @@ adws/adw_data/sessions/
 # of which would have stamped a fake trace db into every target repo.
 sssf.db*
 
-# demo app runtime (example branch)
+# inkwell
 apps/inkwell/inkwell.db*
 
 *.mov
