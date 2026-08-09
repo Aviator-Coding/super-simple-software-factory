@@ -135,13 +135,15 @@ Phase status invariants: `queued` only for manifest-declared phases not yet ente
 
 ## WAL pragmas
 
-Open **every** connection — writer and reader — with:
+The tracer creates the db and is the connection that sets the journal mode:
 
 ```sql
 PRAGMA journal_mode=WAL;
 PRAGMA synchronous=NORMAL;
 PRAGMA busy_timeout=5000;
 ```
+
+Readers open readonly, and a readonly connection cannot change the journal mode. They take `busy_timeout=5000` and `synchronous=NORMAL`, then assert `PRAGMA journal_mode` already reads `wal` and warn when it does not, rather than trying to set it.
 
 WAL allows readers during writes. Writers are the tracers of running ADW processes; concurrent writers are fine given one small transaction per event plus `busy_timeout`. The visualizer reads on a readonly connection with exactly one exception: archiving a session (`POST /api/sessions/:adw_id/archive`) opens a second connection to set `sessions.archived`. That flag is review triage — it says a human has looked at the run — so it is the reader's state living on the row, and no tracer ever writes or reads it.
 
