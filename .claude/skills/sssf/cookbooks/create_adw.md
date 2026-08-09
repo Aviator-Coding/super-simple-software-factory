@@ -6,7 +6,7 @@ Compose a new ADW script — a thin, deterministic Python workflow over agents a
 
 Answer four questions, in order:
 
-1. **What agents, in what order?** Pick from the roster (`adws/adw_sssf_config/sssf.config.yaml`). The starter six cover most chains:
+1. **What agents, in what order?** Pick from the roster (`adws/adw_sssf_config/sssf.config.yaml`). The starter five cover most chains:
 
 | Agent | Use when | Output type | Typical gates |
 |---|---|---|---|
