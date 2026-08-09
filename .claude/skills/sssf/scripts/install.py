@@ -8,7 +8,8 @@ Usage:
     uv run <skill>/scripts/install.py [--force]
 
 Stamps: adws/ (modules + starter ADWs), adws/adw_data/prompt_engineering/
-(5 starter agents), adws/adw_sssf_config/sssf.config.yaml, .env.sample,
+(5 starter agents), adws/adw_data/harness_engineering/,
+adws/adw_sssf_config/sssf.config.yaml, .env.sample, justfile,
 .gitignore entries.
 Existing files are skipped unless --force.
 """
