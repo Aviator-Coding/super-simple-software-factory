@@ -264,7 +264,7 @@ Pi announces a tool call across three raw events, so the interface folds them in
 select * from events where adw_id = ? and rowid > ? order by rowid limit 500;
 ```
 
-That one cursor query is the entire transport. Live view and full history are the same query at different cadence, which is why there is no ingest endpoint, no WebSocket, no backfill, and no separate replay path. Every connection opens WAL, so reads never block the running writers.
+That one cursor query is the transport for the live tail; the surrounding session, phase, envelope, and gate views run their own plain SELECTs against the same db. Live view and full history are the same cursor query at different cadence, which is why there is no ingest endpoint, no WebSocket, no backfill, and no separate replay path. The tracer opens the db in WAL, so reads never block the running writers.
 
 Files stay the raw record (`raw_output.jsonl`, `envelope.json`, `agent_map.json`). The db is the queryable mirror. Losing it loses nothing you cannot rebuild.
 
@@ -288,7 +288,7 @@ super-simple-software-factory/          # the deployable factory, and nothing el
     ├── SKILL.md                        # hard rules + request routing table
     ├── cookbooks/                      # 9 orchestrator playbooks, loaded lazily
     ├── references/                     # config / handoff / observability specs
-    ├── scripts/                        # install.py, make_config.py, make_adw.py
+    ├── scripts/                        # install.py, make_config.py, make_adw.py, test_make_adw.py
     ├── apps/visualizer/                # the read-only trace UI (Vue + Vite on Bun)
     └── templates/                      # EXACTLY what install.py stamps
         ├── sssf.config.yaml            # the starter roster
