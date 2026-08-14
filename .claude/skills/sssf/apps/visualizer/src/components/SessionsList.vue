@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import type { SessionSummary } from '../lib/types'
 import { fetchSessions } from '../lib/api'
+import { fetchPollMs } from '../lib/poll'
 import { ts } from '../lib/format'
 import SessionCard from './SessionCard.vue'
 
@@ -28,12 +29,20 @@ async function tick() {
   }
 }
 
+let cancelled = false
+
 onMounted(() => {
   void tick()
-  timer = setInterval(() => void tick(), 500)
+  void fetchPollMs().then((ms) => {
+    if (cancelled) return
+    timer = setInterval(() => void tick(), ms)
+  })
 })
 
-onUnmounted(() => clearInterval(timer))
+onUnmounted(() => {
+  cancelled = true
+  clearInterval(timer)
+})
 
 /** Optimistic removal; an empty id means the write failed, so re-sync instead. */
 function onArchived(adwId: string) {

@@ -9,16 +9,19 @@
  *   bun run server/index.ts
  *   bun run server/index.ts --db /path/to/repo/adws/adw_data/sssf.db
  *   SSSF_DB=/path/to/sssf.db PORT=4600 bun run server/index.ts
+ *   SSSF_CONFIG=/path/to/sssf.config.yaml bun run server/index.ts
  */
 import { existsSync, statSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
+import { loadObservability, resolveConfigPath } from "./config.ts";
 import { SssfDb, resolveDbPath } from "./db.ts";
-import type { AgentPrompts, ApiError, HealthResponse } from "../shared/types.ts";
+import type { AgentPrompts, ApiError, ConfigResponse, HealthResponse } from "../shared/types.ts";
 
 const PORT = Number(process.env.PORT ?? 4600);
 const DIST_DIR = resolve(import.meta.dir, "..", "dist");
 
 const dbPath = resolveDbPath();
+const configPath = resolveConfigPath(Bun.argv, process.env, process.cwd(), dbPath);
 let db: SssfDb;
 try {
   db = new SssfDb(dbPath);
@@ -123,6 +126,11 @@ const server = Bun.serve({
         } satisfies HealthResponse),
     ),
 
+    "/api/config": safely(() => {
+      const path = resolveConfigPath(Bun.argv, process.env, process.cwd(), db.path);
+      return json({ observability: loadObservability(path) } satisfies ConfigResponse);
+    }),
+
     "/api/sessions": safely((req) => json(db.sessions(intQuery(req, "limit", 200)))),
 
     "/api/sessions/:adw_id": safely((req) => {
@@ -198,8 +206,13 @@ const server = Bun.serve({
   },
 });
 
+const observability = loadObservability(configPath);
 console.log(`[sssf] visualizer api  http://localhost:${server.port}`);
 console.log(`[sssf] db              ${db.path}  [journal_mode=${db.journalMode}]`);
+console.log(
+  `[sssf] poll_ms         ${observability.poll_ms}` +
+    (configPath ? `  [${configPath}]` : "  [default — no sssf.config.yaml]"),
+);
 console.log(
   existsSync(DIST_DIR)
     ? `[sssf] serving ui from  ${DIST_DIR}`

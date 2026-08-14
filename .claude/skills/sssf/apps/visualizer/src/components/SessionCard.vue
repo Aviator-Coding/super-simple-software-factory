@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import type { EventRow, SessionSummary } from '../lib/types'
 import { archiveSession, fetchEvents } from '../lib/api'
+import { fetchPollMs } from '../lib/poll'
 import { axisTicks, fmtDate, fmtOffset, ts } from '../lib/format'
 import { agentColor, dotColor, eventLabel } from '../lib/events'
 import { hrefFor } from '../lib/router'
@@ -33,9 +34,18 @@ let cursor = 0
 let inflight = false
 let timer: ReturnType<typeof setInterval> | undefined
 
+let cancelled = false
+
 function stopPolling() {
   clearInterval(timer)
   timer = undefined
+}
+
+async function startPolling() {
+  if (cancelled || timer) return
+  const ms = await fetchPollMs()
+  if (cancelled || timer) return
+  timer = setInterval(() => void pull(), ms)
 }
 
 async function pull() {
@@ -62,15 +72,18 @@ async function pull() {
 
 onMounted(() => {
   void pull()
-  if (props.session.status === 'running') timer = setInterval(() => void pull(), 500)
+  if (props.session.status === 'running') void startPolling()
 })
 
-onUnmounted(stopPolling)
+onUnmounted(() => {
+  cancelled = true
+  stopPolling()
+})
 
 watch(
   () => props.session.status,
   (status) => {
-    if (status === 'running' && !timer) timer = setInterval(() => void pull(), 500)
+    if (status === 'running' && !timer) void startPolling()
     // On the transition out of running, one last pull drains the tail and stops the timer.
     else if (status !== 'running') void pull()
   },

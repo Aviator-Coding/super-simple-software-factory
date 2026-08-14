@@ -13,6 +13,7 @@ import type {
 } from '../lib/types'
 import { Bot, SquareTerminal, UserRound } from 'lucide-vue-next'
 import { fetchEnvelopes, fetchEvents, fetchGates, fetchSession } from '../lib/api'
+import { fetchPollMs } from '../lib/poll'
 import { axisTicks, fmtDate, payloadOk, ts } from '../lib/format'
 import { modelIcon, modelName } from '../lib/models'
 import { agentColor, hexAlpha, parseAgentStart } from '../lib/events'
@@ -79,12 +80,18 @@ async function tick() {
   }
 }
 
+let cancelled = false
+
 onMounted(() => {
   void tick()
-  timer = setInterval(() => void tick(), 500)
+  void fetchPollMs().then((ms) => {
+    if (cancelled) return
+    timer = setInterval(() => void tick(), ms)
+  })
 })
 
 onUnmounted(() => {
+  cancelled = true
   clearInterval(timer)
   phaseCrumb.value = null
 })

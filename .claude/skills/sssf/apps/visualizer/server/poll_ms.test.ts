@@ -68,15 +68,25 @@ async function startServer(env: Record<string, string>): Promise<string> {
   let last = "";
   while (Date.now() < deadline) {
     try {
+      // Sequential on purpose: each attempt waits for the child to listen.
+      // oxlint-disable-next-line no-await-in-loop
       const res = await fetch(`${origin}/api/health`);
       if (res.ok) return origin;
       last = `health ${res.status}`;
     } catch (err) {
       last = err instanceof Error ? err.message : String(err);
     }
+    // oxlint-disable-next-line no-await-in-loop
     await Bun.sleep(40);
   }
   throw new Error(`visualizer server did not become ready: ${last}`);
+}
+
+async function getPollMs(origin: string): Promise<number> {
+  const res = await fetch(`${origin}/api/config`);
+  expect(res.ok).toBe(true);
+  const body = (await res.json()) as { observability?: { poll_ms?: unknown } };
+  return body.observability?.poll_ms as number;
 }
 
 test("GET /api/config serves observability.poll_ms from the target config", async () => {
@@ -85,12 +95,13 @@ test("GET /api/config serves observability.poll_ms from the target config", asyn
     SSSF_DB: dbPath,
     SSSF_CONFIG: configPath,
   });
-  const res = await fetch(`${origin}/api/config`);
-  expect(res.ok).toBe(true);
-  const body = (await res.json()) as {
-    observability?: { poll_ms?: unknown; db?: unknown };
-  };
-  expect(body.observability?.poll_ms).toBe(2500);
+  expect(await getPollMs(origin)).toBe(2500);
+});
+
+test("GET /api/config finds the default roster next to the trace db", async () => {
+  const { dbPath } = makeTarget(1800);
+  const origin = await startServer({ SSSF_DB: dbPath, SSSF_CONFIG: "" });
+  expect(await getPollMs(origin)).toBe(1800);
 });
 
 test("live Vue refresh sites read poll_ms instead of hardcoding 500ms", () => {
