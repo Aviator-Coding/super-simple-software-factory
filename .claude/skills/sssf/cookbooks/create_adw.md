@@ -45,7 +45,7 @@ Answer four questions, in order:
 uv run .claude/skills/sssf/scripts/make_adw.py --name review_docs --agents scout,builder
 ```
 
-Writes `adws/adw_review_docs.py`: one agent phase per name, chained by `previous=`, starter agents mapped to their output types, unknown agents to `GenericOutput`. It does NOT create config entries or prompt files — do that first (`update_config.md`), or `agents.validate()` will stop the run and tell you what's missing.
+Writes `adws/adw_review_docs.py`: one agent phase per name, chained by `previous=`, starter agents mapped to their output types, unknown agents to `GenericOutput`. When the tail's output type carries a pass/fail field (`ReviewOutput.approved`, `VerifyOutput.passed`) the generated `run.finish()` passes it as `accepted=`, so a chain ending in a reviewer fails the run when the review was not approved; other tails get a bare `run.finish()`. It does NOT create config entries or prompt files — do that first (`update_config.md`), or `agents.validate()` will stop the run and tell you what's missing.
 
 ## The canonical skeleton
 
