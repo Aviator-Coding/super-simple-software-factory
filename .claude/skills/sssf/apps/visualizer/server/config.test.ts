@@ -53,3 +53,15 @@ test("resolveConfigPath prefers --config, then SSSF_CONFIG, then the db sibling"
   expect(resolveConfigPath([], {}, "/no/such/cwd", dbPath)).toBe(configPath);
   expect(resolveConfigPath([], {}, "/no/such/cwd")).toBeNull();
 });
+
+test("a missing explicit SSSF_CONFIG falls through to the db sibling", () => {
+  const { configPath, dbPath } = writeConfig("observability:\n  poll_ms: 9\n");
+  expect(
+    resolveConfigPath(
+      [],
+      { SSSF_CONFIG: "/no/such/roster.yaml" },
+      "/no/such/cwd",
+      dbPath,
+    ),
+  ).toBe(configPath);
+});

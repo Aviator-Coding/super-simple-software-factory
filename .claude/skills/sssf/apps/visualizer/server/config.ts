@@ -27,7 +27,11 @@ export function resolveConfigPath(
   const flagged = flagValue(argv, "--config") ?? env.SSSF_CONFIG;
   if (flagged && flagged.trim() !== "") {
     const resolved = isAbsolute(flagged) ? flagged : resolve(cwd, flagged);
-    return existsSync(resolved) ? resolved : null;
+    if (existsSync(resolved)) return resolved;
+    // An explicit path that is not on disk is not "no config" — fall through
+    // so a mangled SSSF_CONFIG (just obs used to prefix an absolute roster)
+    // still finds the default roster instead of silently defaulting poll_ms.
+    console.warn(`[sssf] config not found at ${resolved} — trying defaults`);
   }
 
   if (dbPath) {

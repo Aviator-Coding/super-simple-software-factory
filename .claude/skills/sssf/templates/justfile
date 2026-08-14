@@ -85,5 +85,7 @@ procs ADW_ID:
 # app dir and would otherwise look for a trace db sitting next to itself.
 
 # boot the trace UI, http://localhost:4601 (api on :4600)
+# `/` joins paths; an already-absolute SSSF_CONFIG is left alone instead of
+# being prefixed into a path that does not exist.
 obs:
-    cd .claude/skills/sssf/apps/visualizer && bun install && (SSSF_DB={{justfile_directory()}}/{{db}} SSSF_CONFIG={{justfile_directory()}}/{{config}} bun run server/index.ts &) && bunx vite
+    cd .claude/skills/sssf/apps/visualizer && bun install && (SSSF_DB={{ justfile_directory() / db }} SSSF_CONFIG={{ justfile_directory() / config }} bun run server/index.ts &) && bunx vite
