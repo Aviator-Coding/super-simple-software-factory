@@ -20,6 +20,16 @@ OUTPUT_TYPES = {"planner": "PlanOutput", "builder": "BuildOutput",
                 "scout": "ScoutOutput",
                 "reviewer": "ReviewOutput", "documenter": "DocumentOutput"}
 
+# Tail types whose envelope has a pass/fail field with a falsy default.
+# Bare run.finish() defaults accepted=True, so a rejected review or red
+# suite would print a green banner and exit 0 (SKILL.md hard rule 10).
+# Match the shipped templates: adw_build_review.py, adw_build_test.py,
+# adw_plan_build_test.py.
+ACCEPTANCE = {
+    "ReviewOutput": ("approved", "the reviewer never approved"),
+    "VerifyOutput": ("passed", "the suite never passed"),
+}
+
 HEADER = '''#!/usr/bin/env -S uv run
 # /// script
 # dependencies = ["pydantic", "python-dotenv", "pyyaml", "rich"]
@@ -52,7 +62,7 @@ def main(prompt: str, config: str = "adws/adw_sssf_config/sssf.config.yaml", adw
 
     previous = None
 {phases}
-    return run.finish()
+    return {finish}
 
 
 if __name__ == "__main__":
@@ -71,6 +81,23 @@ PHASE = '''    # TODO: replace this description — say what THIS phase does and
                                      previous=previous,
                                      gates=[gates.artifacts_exist]))
 '''
+
+
+def finish_call(output_type: str) -> str:
+    """Emit run.finish(...) for the chain's tail type.
+
+    Reviewer/verify tails pass accepted= from the envelope field, matching
+    the shipped templates. Other tails have no pass/fail field, so a bare
+    finish() is correct.
+    """
+    spec = ACCEPTANCE.get(output_type)
+    if spec is None:
+        return "run.finish()"
+    attr, reason = spec
+    return (
+        f"run.finish(accepted=previous is not None and previous.{attr},\n"
+        f'                      reason="{reason}")'
+    )
 
 
 def main() -> int:
@@ -100,6 +127,7 @@ def main() -> int:
         imports=", ".join(sorted(set(types))),
         agents_list=repr(sorted(set(agent_names))),
         phases="\n".join(phases),
+        finish=finish_call(types[-1]),
     )
 
     dest = Path.cwd() / "adws" / f"adw_{args.name}.py"
