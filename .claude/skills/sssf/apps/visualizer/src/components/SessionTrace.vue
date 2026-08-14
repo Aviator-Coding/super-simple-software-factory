@@ -13,7 +13,7 @@ import type {
 } from '../lib/types'
 import { Bot, SquareTerminal, UserRound } from 'lucide-vue-next'
 import { fetchEnvelopes, fetchEvents, fetchGates, fetchSession } from '../lib/api'
-import { fetchPollMs } from '../lib/poll'
+import { usePolling } from '../lib/usePolling'
 import { axisTicks, fmtDate, payloadOk, ts } from '../lib/format'
 import { modelIcon, modelName } from '../lib/models'
 import { agentColor, hexAlpha, parseAgentStart } from '../lib/events'
@@ -37,7 +37,6 @@ const nowMs = ref(Date.now())
 
 let cursor = 0
 let inflight = false
-let timer: ReturnType<typeof setInterval> | undefined
 
 const SIDE_TABLE_TYPES = new Set(['gate_pass', 'gate_fail', 'handoff', 'agent_end', 'phase_end', 'error'])
 
@@ -80,19 +79,14 @@ async function tick() {
   }
 }
 
-let cancelled = false
+const { start } = usePolling(tick)
 
 onMounted(() => {
   void tick()
-  void fetchPollMs().then((ms) => {
-    if (cancelled) return
-    timer = setInterval(() => void tick(), ms)
-  })
+  void start()
 })
 
 onUnmounted(() => {
-  cancelled = true
-  clearInterval(timer)
   phaseCrumb.value = null
 })
 

@@ -1,6 +1,5 @@
+import { DEFAULT_POLL_MS, normalizePollMs } from '@shared/poll'
 import { fetchConfig } from './api'
-
-export const DEFAULT_POLL_MS = 500
 
 let cached: Promise<number> | undefined
 
@@ -10,10 +9,4 @@ export function fetchPollMs(): Promise<number> {
     .then((cfg) => normalizePollMs(cfg.observability?.poll_ms))
     .catch(() => DEFAULT_POLL_MS)
   return cached
-}
-
-export function normalizePollMs(raw: unknown): number {
-  if (typeof raw !== 'number' || !Number.isFinite(raw)) return DEFAULT_POLL_MS
-  const ms = Math.trunc(raw)
-  return ms >= 1 ? ms : DEFAULT_POLL_MS
 }

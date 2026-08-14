@@ -54,32 +54,60 @@ function makeTarget(pollMs: number): { dbPath: string; configPath: string } {
   return { dbPath, configPath };
 }
 
+/** Generous: a cold bun start on a busy machine is slow, but never minutes. */
+const READY_TIMEOUT_MS = 30_000;
+
+async function withTimeout<T>(work: Promise<T>, ms: number, what: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${what} timed out after ${ms}ms`)), ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * The server logs its bound port once Bun.serve is listening, so reading that
+ * line is both the port lookup and the readiness signal — no port guessing, so
+ * no collision with whatever else is on the machine.
+ */
+async function readBoundPort(child: Bun.Subprocess): Promise<number> {
+  const reader = (child.stdout as ReadableStream<Uint8Array>).getReader();
+  const decoder = new TextDecoder();
+  let out = "";
+  try {
+    for (;;) {
+      // Sequential on purpose: chunks arrive in order until the port line does.
+      // oxlint-disable-next-line no-await-in-loop
+      const { value, done } = await reader.read();
+      if (done) break;
+      out += decoder.decode(value, { stream: true });
+      const match = out.match(/visualizer api\s+http:\/\/localhost:(\d+)/);
+      if (match) return Number(match[1]);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const stderr = await new Response(child.stderr as ReadableStream<Uint8Array>).text();
+  throw new Error(`visualizer server exited before binding a port:\n${out}\n${stderr}`);
+}
+
 async function startServer(env: Record<string, string>): Promise<string> {
-  const port = String(20_000 + Math.floor(Math.random() * 10_000));
   const child = Bun.spawn(["bun", "run", "server/index.ts"], {
     cwd: VISUALIZER_ROOT,
-    env: { ...process.env, PORT: port, ...env },
+    // PORT=0 lets the kernel pick a free port; the child reports which.
+    env: { ...process.env, PORT: "0", ...env },
     stdout: "pipe",
     stderr: "pipe",
   });
   children.push(child);
-  const origin = `http://127.0.0.1:${port}`;
-  const deadline = Date.now() + 5000;
-  let last = "";
-  while (Date.now() < deadline) {
-    try {
-      // Sequential on purpose: each attempt waits for the child to listen.
-      // oxlint-disable-next-line no-await-in-loop
-      const res = await fetch(`${origin}/api/health`);
-      if (res.ok) return origin;
-      last = `health ${res.status}`;
-    } catch (err) {
-      last = err instanceof Error ? err.message : String(err);
-    }
-    // oxlint-disable-next-line no-await-in-loop
-    await Bun.sleep(40);
-  }
-  throw new Error(`visualizer server did not become ready: ${last}`);
+  const port = await withTimeout(readBoundPort(child), READY_TIMEOUT_MS, "visualizer server start");
+  return `http://127.0.0.1:${port}`;
 }
 
 async function getPollMs(origin: string): Promise<number> {
@@ -89,25 +117,59 @@ async function getPollMs(origin: string): Promise<number> {
   return body.observability?.poll_ms as number;
 }
 
-test("GET /api/config serves observability.poll_ms from the target config", async () => {
-  const { dbPath, configPath } = makeTarget(2500);
-  const origin = await startServer({
-    SSSF_DB: dbPath,
-    SSSF_CONFIG: configPath,
-  });
-  expect(await getPollMs(origin)).toBe(2500);
-});
+// Spawning bun and waiting for it to listen outruns the 5s default.
+const SERVER_TEST_TIMEOUT_MS = 60_000;
 
-test("GET /api/config finds the default roster next to the trace db", async () => {
-  const { dbPath } = makeTarget(1800);
-  const origin = await startServer({ SSSF_DB: dbPath, SSSF_CONFIG: "" });
-  expect(await getPollMs(origin)).toBe(1800);
-});
+test(
+  "GET /api/config serves observability.poll_ms from the target config",
+  async () => {
+    const { dbPath, configPath } = makeTarget(2500);
+    const origin = await startServer({
+      SSSF_DB: dbPath,
+      SSSF_CONFIG: configPath,
+    });
+    expect(await getPollMs(origin)).toBe(2500);
+  },
+  SERVER_TEST_TIMEOUT_MS,
+);
 
-test("live Vue refresh sites read poll_ms instead of hardcoding 500ms", () => {
+test(
+  "GET /api/config finds the default roster next to the trace db",
+  async () => {
+    const { dbPath } = makeTarget(1800);
+    const origin = await startServer({ SSSF_DB: dbPath, SSSF_CONFIG: "" });
+    expect(await getPollMs(origin)).toBe(1800);
+  },
+  SERVER_TEST_TIMEOUT_MS,
+);
+
+test("live Vue refresh sites poll on the configured cadence, never a literal", () => {
   for (const rel of VUE_POLL_SITES) {
     const src = readFileSync(join(VISUALIZER_ROOT, rel), "utf8");
-    expect(src, rel).not.toMatch(/setInterval\([^)]*,\s*500\s*\)/);
-    expect(src, rel).toMatch(/fetchPollMs/);
+    // Cadence ownership lives in usePolling now, so a refresh site scheduling
+    // its own interval is the regression, whatever number it picked.
+    expect(src, rel).not.toMatch(/setInterval\(/);
+    expect(src, rel).toMatch(/usePolling/);
   }
+  const composable = readFileSync(join(VISUALIZER_ROOT, "src/lib/usePolling.ts"), "utf8");
+  expect(composable).toMatch(/fetchPollMs/);
+  expect(composable).not.toMatch(/setInterval\([^)]*,\s*\d+\s*\)/);
+});
+
+/**
+ * The other half of the operator path: `just obs` hands the roster to the
+ * server. just's `/` is a plain slash-join ("a `/` is added even if one is
+ * already present"), so `justfile_directory() / config` turns an absolute
+ * SSSF_CONFIG into /repo//abs/roster.yaml and the override is silently lost.
+ * `join` is the one with PathBuf semantics.
+ */
+test("just obs forwards an absolute SSSF_CONFIG untouched", () => {
+  const justfile = readFileSync(
+    join(VISUALIZER_ROOT, "..", "..", "templates", "justfile"),
+    "utf8",
+  );
+  const obs = justfile.slice(justfile.indexOf("\nobs:"));
+  expect(obs).not.toMatch(/justfile_directory\(\)\s*\/\s*config/);
+  expect(obs).toContain('SSSF_CONFIG="{{ join(justfile_directory(), config) }}"');
+  expect(obs).toContain('SSSF_DB="{{ join(justfile_directory(), db) }}"');
 });

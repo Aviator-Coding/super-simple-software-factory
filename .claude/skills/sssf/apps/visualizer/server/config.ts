@@ -12,9 +12,9 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
+import { DEFAULT_POLL_MS, normalizePollMs } from "../shared/poll.ts";
 import type { ObservabilityConfig } from "../shared/types.ts";
 
-export const DEFAULT_POLL_MS = 500;
 export const DEFAULT_DB_RELATIVE = "adws/adw_data/sssf.db";
 export const DEFAULT_CONFIG_RELATIVE = "adws/adw_sssf_config/sssf.config.yaml";
 
@@ -61,13 +61,6 @@ export function loadObservability(configPath: string | null): ObservabilityConfi
     console.warn(`[sssf] failed to read ${configPath}: ${(error as Error).message}`);
     return { db: DEFAULT_DB_RELATIVE, poll_ms: DEFAULT_POLL_MS };
   }
-}
-
-export function normalizePollMs(raw: unknown): number {
-  const n = typeof raw === "string" && raw.trim() !== "" ? Number(raw) : raw;
-  if (typeof n !== "number" || !Number.isFinite(n)) return DEFAULT_POLL_MS;
-  const ms = Math.trunc(n);
-  return ms >= 1 ? ms : DEFAULT_POLL_MS;
 }
 
 function flagValue(argv: string[], name: string): string | undefined {

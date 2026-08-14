@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue'
+import { computed, onMounted, shallowRef, watch } from 'vue'
 import type { EventRow, SessionSummary } from '../lib/types'
 import { archiveSession, fetchEvents } from '../lib/api'
-import { fetchPollMs } from '../lib/poll'
+import { usePolling } from '../lib/usePolling'
 import { axisTicks, fmtDate, fmtOffset, ts } from '../lib/format'
 import { agentColor, dotColor, eventLabel } from '../lib/events'
 import { hrefFor } from '../lib/router'
@@ -32,21 +32,8 @@ async function archive(event: MouseEvent) {
 const events = shallowRef<EventRow[]>([])
 let cursor = 0
 let inflight = false
-let timer: ReturnType<typeof setInterval> | undefined
 
-let cancelled = false
-
-function stopPolling() {
-  clearInterval(timer)
-  timer = undefined
-}
-
-async function startPolling() {
-  if (cancelled || timer) return
-  const ms = await fetchPollMs()
-  if (cancelled || timer) return
-  timer = setInterval(() => void pull(), ms)
-}
+const { start: startPolling, stop: stopPolling } = usePolling(pull)
 
 async function pull() {
   if (inflight) return
@@ -75,17 +62,12 @@ onMounted(() => {
   if (props.session.status === 'running') void startPolling()
 })
 
-onUnmounted(() => {
-  cancelled = true
-  stopPolling()
-})
-
 watch(
   () => props.session.status,
   (status) => {
-    if (status === 'running' && !timer) void startPolling()
+    if (status === 'running') void startPolling()
     // On the transition out of running, one last pull drains the tail and stops the timer.
-    else if (status !== 'running') void pull()
+    else void pull()
   },
 )
 

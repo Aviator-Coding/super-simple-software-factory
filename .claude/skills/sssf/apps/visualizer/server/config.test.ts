@@ -2,12 +2,8 @@ import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  DEFAULT_POLL_MS,
-  loadObservability,
-  normalizePollMs,
-  resolveConfigPath,
-} from "./config.ts";
+import { DEFAULT_POLL_MS, normalizePollMs } from "../shared/poll.ts";
+import { loadObservability, resolveConfigPath } from "./config.ts";
 
 function writeConfig(contents: string): { root: string; configPath: string; dbPath: string } {
   const root = mkdtempSync(join(tmpdir(), "sssf-cfg-"));
