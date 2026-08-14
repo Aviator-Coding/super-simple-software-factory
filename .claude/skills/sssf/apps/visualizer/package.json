@@ -11,7 +11,8 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "bun run server/index.ts",
     "typecheck": "vue-tsc --noEmit",
-    "lint": "oxlint ."
+    "lint": "oxlint .",
+    "test": "bun test"
   },
   "dependencies": {
     "@fontsource/play": "^5.3.0",
