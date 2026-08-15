@@ -14,6 +14,7 @@
 import { Database } from "bun:sqlite";
 import { existsSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
+import { DEFAULT_DB_RELATIVE } from "./config.ts";
 import type {
   AgentSession,
   AgentStartPayload,
@@ -28,7 +29,6 @@ import type {
   SessionUsage,
 } from "../shared/types.ts";
 
-const DEFAULT_DB_RELATIVE = "adws/adw_data/sssf.db";
 const MAX_LIMIT = 1000;
 const DEFAULT_LIMIT = 500;
 

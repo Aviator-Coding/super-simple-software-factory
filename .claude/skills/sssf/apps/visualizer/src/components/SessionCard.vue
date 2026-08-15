@@ -14,8 +14,8 @@ const props = defineProps<{ session: SessionSummary; nowMs: number }>()
 const emit = defineEmits<{ archived: [adwId: string] }>()
 
 // The card is an <a>; the button lives inside it, so the click must not
-// navigate. Told the parent optimistically — the poll would take up to half a
-// second to drop the card, and a triage click should feel instant.
+// navigate. Told the parent optimistically - the poll would take up to one
+// poll_ms cadence to drop the card, and a triage click should feel instant.
 async function archive(event: MouseEvent) {
   event.preventDefault()
   event.stopPropagation()

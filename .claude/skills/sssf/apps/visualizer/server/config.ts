@@ -11,12 +11,16 @@
  * the next /api/config request.
  */
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { DEFAULT_POLL_MS, normalizePollMs } from "../shared/poll.ts";
 import type { ObservabilityConfig } from "../shared/types.ts";
 
+/** The documented default data layout — one definition, db.ts reads it too. */
 export const DEFAULT_DB_RELATIVE = "adws/adw_data/sssf.db";
 export const DEFAULT_CONFIG_RELATIVE = "adws/adw_sssf_config/sssf.config.yaml";
+
+/** Where the roster sits relative to the directory holding the trace db. */
+const CONFIG_FROM_DB_DIR = relative(dirname(DEFAULT_DB_RELATIVE), DEFAULT_CONFIG_RELATIVE);
 
 export function resolveConfigPath(
   argv: string[] = Bun.argv,
@@ -36,7 +40,7 @@ export function resolveConfigPath(
 
   if (dbPath) {
     // Default layout: {data_dir}/sssf.db sits beside ../adw_sssf_config/.
-    const besideDb = resolve(dirname(dbPath), "..", "adw_sssf_config", "sssf.config.yaml");
+    const besideDb = resolve(dirname(dbPath), CONFIG_FROM_DB_DIR);
     if (existsSync(besideDb)) return besideDb;
   }
 
