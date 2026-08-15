@@ -66,9 +66,54 @@ def _on_triggers(text: str) -> set[str]:
     return found
 
 
-def _runs_scripts_pytest(text: str) -> bool:
+_BLOCK_SCALAR_INDICATORS = {"|", ">", "|-", ">-", "|+", ">+"}
+
+
+def _run_step_commands(text: str) -> list[str]:
+    """Extract the literal command text of each step's ``run:`` key.
+
+    This walks the block structure (indentation) rather than treating the
+    file as one blob, so a ``pytest`` mention in an unrelated step or a
+    scripts-path mention in an unrelated key (e.g. a ``paths:`` trigger
+    filter) cannot be mistaken for a step that actually runs pytest.
+    """
     blob = _strip_comments(text)
-    return "pytest" in blob and SCRIPTS in blob
+    lines = blob.splitlines()
+    commands: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        match = re.match(r"^(?P<indent>[ \t]*)-?\s*run:[ \t]*(?P<val>.*)$", line)
+        if not match:
+            i += 1
+            continue
+        indent = len(match.group("indent"))
+        val = match.group("val").strip()
+        i += 1
+        if val and val not in _BLOCK_SCALAR_INDICATORS:
+            commands.append(val)
+            continue
+        block_lines = []
+        while i < len(lines):
+            next_line = lines[i]
+            if not next_line.strip():
+                block_lines.append(next_line)
+                i += 1
+                continue
+            next_indent = len(next_line) - len(next_line.lstrip(" \t"))
+            if next_indent <= indent:
+                break
+            block_lines.append(next_line)
+            i += 1
+        commands.append("\n".join(block_lines))
+    return commands
+
+
+def _runs_scripts_pytest(text: str) -> bool:
+    return any(
+        "pytest" in command and SCRIPTS in command
+        for command in _run_step_commands(text)
+    )
 
 
 def test_push_pr_workflow_runs_script_pytest():
