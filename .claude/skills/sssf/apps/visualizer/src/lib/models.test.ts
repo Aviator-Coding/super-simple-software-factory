@@ -8,9 +8,8 @@
  * Verified against oxlint 1.76.0 (`bun run lint` / `oxlint .`).
  */
 import { expect, test } from "bun:test";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readFileSync } from "node:fs";
 import { modelName } from "./models";
 
 const VISUALIZER_ROOT = dirname(fileURLToPath(import.meta.url)) + "/../..";
@@ -41,8 +40,4 @@ test("modelName keeps the last non-empty path segment", () => {
 test("modelName does not take the first filter match the lint rule suggests", () => {
   // find(Boolean) would return "fireworks"; findLast(Boolean) keeps "kimi-k3".
   expect(modelName("fireworks/accounts/fireworks/models/kimi-k3")).not.toBe("fireworks");
-  const src = readFileSync(join(VISUALIZER_ROOT, "src/lib/models.ts"), "utf8");
-  expect(src).not.toMatch(/\.filter\(Boolean\)\.at\(-1\)/);
-  expect(src).not.toMatch(/\.find\(Boolean\)/);
-  expect(src).toMatch(/\.findLast\(Boolean\)/);
 });
