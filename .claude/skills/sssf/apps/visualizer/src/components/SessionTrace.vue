@@ -79,11 +79,11 @@ async function tick() {
   }
 }
 
-const { start } = usePolling(tick)
+const { start: startPolling } = usePolling(tick)
 
 onMounted(() => {
   void tick()
-  void start()
+  void startPolling()
 })
 
 onUnmounted(() => {

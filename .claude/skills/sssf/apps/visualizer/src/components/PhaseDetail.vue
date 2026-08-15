@@ -233,7 +233,7 @@ function argsHtml(call: ToolCallPayload | null): string {
 
 // ── Collapsible sections ─────────────────────────────────────────────────────
 // Every left-column section can be shown/hidden. The watch keys off phase_id
-// (a stable string), so the 500ms poll replacing the phase object never resets
+// (a stable string), so the live poll replacing the phase object never resets
 // a user's open/closed choices — only selecting a different phase does.
 
 // Every section starts closed — the engineer opens exactly what they need.
@@ -276,7 +276,7 @@ const rawView = reactive(new Set<string>())
 
 // The trace view replaces the phase object on every poll tick, so the watch
 // getter re-fires constantly — only react when the (adw_id, agent) key truly
-// changes, or open panels would snap shut twice a second.
+// changes, or open panels would snap shut on every poll tick.
 let lastPromptKey: string | null | undefined
 watch(
   () => [props.phase.adw_id, props.phase.owner, props.phase.kind] as const,

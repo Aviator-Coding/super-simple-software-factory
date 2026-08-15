@@ -158,3 +158,5 @@ SELECT ... FROM events WHERE adw_id = ? AND rowid > ? ORDER BY rowid LIMIT 500;
 ```
 
 Keep the highest `rowid` returned as the next cursor. History is **the same queries** with filters, lazy-paged as the engineer scrolls or drills in — one mechanism serves both live and past runs, which is why there is no separate replay path.
+
+The cadence is config, not a constant: the visualizer server reads `observability.poll_ms` out of `sssf.config.yaml`, serves it at `GET /api/config`, and every live timer in the UI is scheduled on that one number. `just obs` passes the roster explicitly; a hand-started server takes `--config` / `SSSF_CONFIG` and otherwise looks for the default roster next to the trace db, so the standard layout needs no flag. A roster it cannot find, or a `poll_ms` that is missing or not a positive number, falls back to 500. The server prints the cadence it settled on, and where it came from, at startup.
