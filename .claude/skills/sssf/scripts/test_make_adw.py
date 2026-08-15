@@ -8,7 +8,8 @@ to `accepted=`. Bare `run.finish()` defaults accepted=True and would report
 success on a rejected review (SKILL.md hard rule 10).
 
 Run directly: python3 test_make_adw.py
-The runtime checks invoke `uv run` for the generated ADW's dependencies.
+The runtime checks invoke `uv run` for the generated ADW's dependencies, and
+`test_make_adw_is_runnable_via_uv` invokes `uv run` on make_adw.py itself.
 """
 
 from __future__ import annotations
@@ -41,14 +42,20 @@ def make_adw():
 
 
 def generate(tmp_dir: Path, name: str = "regression_check",
-             agents: str = "scout,builder") -> str:
+             agents: str = "scout,builder",
+             via_uv: bool = False) -> str:
+    cmd = (["uv", "run", str(MAKE_ADW)] if via_uv
+           else [sys.executable, str(MAKE_ADW)])
     result = subprocess.run(
-        [sys.executable, str(MAKE_ADW), "--name", name, "--agents", agents],
+        cmd + ["--name", name, "--agents", agents],
         cwd=tmp_dir,
         capture_output=True,
         text=True,
     )
-    assert result.returncode == 0, f"make_adw.py failed: {result.stderr}"
+    assert result.returncode == 0, (
+        f"make_adw.py failed ({'uv run' if via_uv else sys.executable}): "
+        f"{result.stderr or result.stdout}"
+    )
     generated = tmp_dir / "adws" / f"adw_{name}.py"
     assert generated.exists(), f"expected {generated} to be written"
     return generated.read_text()
@@ -63,6 +70,37 @@ def finish_line(source: str) -> str:
                 chunk.append(lines[i + 1].strip())
             return " ".join(chunk)
     raise AssertionError("generated ADW has no return run.finish(...) call")
+
+
+def test_make_adw_is_runnable_via_uv():
+    """The documented launch path is `uv run .../make_adw.py` (create_adw.md).
+
+    uv's line-based PEP 723 parser used to treat the HEADER template's
+    `# /// script` as a second metadata block belonging to make_adw.py itself.
+    A generated-output test cannot catch that: generate() used to invoke
+    python3, which never parses PEP 723.
+
+    Verified against the real `uv` on PATH (not a fixture of its parser).
+    """
+    result = subprocess.run(
+        ["uv", "run", str(MAKE_ADW), "--help"],
+        capture_output=True,
+        text=True,
+    )
+    combined = result.stdout + result.stderr
+    assert result.returncode == 0, (
+        f"documented `uv run {MAKE_ADW.name} --help` failed (exit "
+        f"{result.returncode}): {combined}"
+    )
+    assert "multiple PEP 723" not in combined
+    assert "--name" in combined and "--agents" in combined
+
+    with tempfile.TemporaryDirectory() as tmp:
+        source = generate(Path(tmp), name="review_docs",
+                          agents="scout,builder", via_uv=True)
+    header = source.split('"""', 1)[0]
+    assert header.startswith("#!/usr/bin/env -S uv run\n# /// script\n"), header
+    assert '"rich"' in header
 
 
 def test_declares_rich_dependency():
@@ -261,6 +299,7 @@ def test_builder_tail_still_succeeds_without_accepted():
 
 if __name__ == "__main__":
     tests = [
+        test_make_adw_is_runnable_via_uv,
         test_declares_rich_dependency,
         test_ends_in_run_finish_not_run_succeeded,
         test_reviewer_tail_emits_accepted_from_approved,
