@@ -19,6 +19,8 @@ export type {
   AgentPrompts,
   PromptsResponse,
   HealthResponse,
+  ObservabilityConfig,
+  ConfigResponse,
   SessionStatus,
   PhaseStatus,
   PhaseKind,

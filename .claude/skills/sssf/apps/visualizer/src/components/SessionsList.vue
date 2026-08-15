@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue'
+import { computed, onMounted, ref, shallowRef } from 'vue'
 import type { SessionSummary } from '../lib/types'
 import { fetchSessions } from '../lib/api'
+import { usePolling } from '../lib/usePolling'
 import { ts } from '../lib/format'
 import SessionCard from './SessionCard.vue'
 
@@ -10,7 +11,6 @@ const apiError = ref<string | null>(null)
 const loaded = ref(false)
 const nowMs = ref(Date.now())
 
-let timer: ReturnType<typeof setInterval> | undefined
 let inflight = false
 
 async function tick() {
@@ -28,12 +28,12 @@ async function tick() {
   }
 }
 
+const { start } = usePolling(tick)
+
 onMounted(() => {
   void tick()
-  timer = setInterval(() => void tick(), 500)
+  void start()
 })
-
-onUnmounted(() => clearInterval(timer))
 
 /** Optimistic removal; an empty id means the write failed, so re-sync instead. */
 function onArchived(adwId: string) {

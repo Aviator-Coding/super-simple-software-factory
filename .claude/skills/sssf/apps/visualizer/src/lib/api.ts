@@ -1,4 +1,5 @@
 import type {
+  ConfigResponse,
   Envelope,
   EventRow,
   EventsPage,
@@ -53,6 +54,10 @@ export async function archiveSession(adwId: string, archived = true): Promise<vo
 
 export function fetchHealth(): Promise<HealthResponse> {
   return getJson('/api/health') as Promise<HealthResponse>
+}
+
+export function fetchConfig(): Promise<ConfigResponse> {
+  return getJson('/api/config') as Promise<ConfigResponse>
 }
 
 // PhaseDetail imports the prompts type from here alongside fetchPrompts.

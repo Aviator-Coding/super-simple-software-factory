@@ -301,6 +301,20 @@ export interface HealthResponse {
   sessions: number;
 }
 
+/**
+ * GET /api/config — the observability block from sssf.config.yaml, with
+ * documented defaults applied. The client reads poll_ms as its live-refresh
+ * cadence (references/observability.md).
+ */
+export interface ObservabilityConfig {
+  db: string;
+  poll_ms: number;
+}
+
+export interface ConfigResponse {
+  observability: ObservabilityConfig;
+}
+
 export interface ApiError {
   error: string;
 }

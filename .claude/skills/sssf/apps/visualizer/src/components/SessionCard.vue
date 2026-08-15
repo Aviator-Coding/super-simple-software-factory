@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue'
+import { computed, onMounted, shallowRef, watch } from 'vue'
 import type { EventRow, SessionSummary } from '../lib/types'
 import { archiveSession, fetchEvents } from '../lib/api'
+import { usePolling } from '../lib/usePolling'
 import { axisTicks, fmtDate, fmtOffset, ts } from '../lib/format'
 import { agentColor, dotColor, eventLabel } from '../lib/events'
 import { hrefFor } from '../lib/router'
@@ -13,8 +14,8 @@ const props = defineProps<{ session: SessionSummary; nowMs: number }>()
 const emit = defineEmits<{ archived: [adwId: string] }>()
 
 // The card is an <a>; the button lives inside it, so the click must not
-// navigate. Told the parent optimistically — the poll would take up to half a
-// second to drop the card, and a triage click should feel instant.
+// navigate. Told the parent optimistically - the poll would take up to one
+// poll_ms cadence to drop the card, and a triage click should feel instant.
 async function archive(event: MouseEvent) {
   event.preventDefault()
   event.stopPropagation()
@@ -31,12 +32,8 @@ async function archive(event: MouseEvent) {
 const events = shallowRef<EventRow[]>([])
 let cursor = 0
 let inflight = false
-let timer: ReturnType<typeof setInterval> | undefined
 
-function stopPolling() {
-  clearInterval(timer)
-  timer = undefined
-}
+const { start: startPolling, stop: stopPolling } = usePolling(pull)
 
 async function pull() {
   if (inflight) return
@@ -62,17 +59,15 @@ async function pull() {
 
 onMounted(() => {
   void pull()
-  if (props.session.status === 'running') timer = setInterval(() => void pull(), 500)
+  if (props.session.status === 'running') void startPolling()
 })
-
-onUnmounted(stopPolling)
 
 watch(
   () => props.session.status,
   (status) => {
-    if (status === 'running' && !timer) timer = setInterval(() => void pull(), 500)
+    if (status === 'running') void startPolling()
     // On the transition out of running, one last pull drains the tail and stops the timer.
-    else if (status !== 'running') void pull()
+    else void pull()
   },
 )
 

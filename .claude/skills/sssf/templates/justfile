@@ -81,9 +81,12 @@ procs ADW_ID:
 
 # ── observability UI ────────────────────────────────────────────────────────
 
-# Needs bun. The db path is passed explicitly because the server runs from the
-# app dir and would otherwise look for a trace db sitting next to itself.
+# Needs bun. The db and roster paths are passed explicitly because the server
+# runs from the app dir and would otherwise look for a trace db sitting next to
+# itself. `join` has PathBuf semantics, so an already-absolute SSSF_CONFIG is
+# passed through untouched. just's `/` would not: it is a plain slash-join, and
+# would prefix the repo root onto it, yielding a path that does not exist.
 
 # boot the trace UI, http://localhost:4601 (api on :4600)
 obs:
-    cd .claude/skills/sssf/apps/visualizer && bun install && (SSSF_DB={{justfile_directory()}}/{{db}} bun run server/index.ts &) && bunx vite
+    cd .claude/skills/sssf/apps/visualizer && bun install && (SSSF_DB="{{ join(justfile_directory(), db) }}" SSSF_CONFIG="{{ join(justfile_directory(), config) }}" bun run server/index.ts &) && bunx vite
